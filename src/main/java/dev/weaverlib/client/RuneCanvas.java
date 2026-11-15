@@ -11,6 +11,7 @@ import dev.weaverlib.rune.FocusSpell;
 import com.leclowndu93150.thaumaturge.api.spell.Spells;
 import com.leclowndu93150.thaumaturge.api.spell.part.SpellPart;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import dev.weaverlib.rune.RuneModifier;
@@ -35,6 +36,8 @@ final class RuneCanvas extends Screen {
     private static final int PAGE_TEXT = 0xFF492C21;
     private static final int GUIDE_INK = 0xFFAA8469;
     private static final int CAST_INK = 0xFFA01FDB;
+    private static final int MAX_CAPTURE_POINTS = 512;
+    private static final int RETAINED_CAPTURE_POINTS = 384;
     private static final List<Template> GUIDES = Stream.concat(
         Arrays.stream(Weave.values()).map(Weave::template),
         Stream.concat(Arrays.stream(RuneModifier.values()).map(RuneModifier::template),
@@ -42,6 +45,8 @@ final class RuneCanvas extends Screen {
     private final List<List<List<Point>>> glyphs = new ArrayList<>();
     private final List<List<Point>> strokes = new ArrayList<>();
     private final List<Point> activeStroke = new ArrayList<>();
+    private final Map<List<Point>, List<Point>> completedPreviews = new IdentityHashMap<>();
+    private List<Point> activePreview = List.of();
     private final InputConstants.Key canvasKey;
     private final int drawButton;
     private int guide = -1;
@@ -138,6 +143,7 @@ final class RuneCanvas extends Screen {
             strokes.add(List.copyOf(activeStroke));
         }
         activeStroke.clear();
+        activePreview = List.of();
     }
 
     private void castAndClose() {
@@ -152,7 +158,8 @@ final class RuneCanvas extends Screen {
             for (int i = 0; i < drawing.size(); i++) {
                 settings.add(encodeArguments(arguments.getOrDefault(i, Map.of())));
             }
-            PacketDistributor.sendToServer(new RuneCast(drawing, settings));
+            var encodedInk = drawing.stream().map(RuneCanvas::recognitionInk).toList();
+            PacketDistributor.sendToServer(new RuneCast(encodedInk, settings));
         }
         onClose();
     }
@@ -169,15 +176,16 @@ final class RuneCanvas extends Screen {
     private void appendPoint(double x, double y) {
         Point current = point(x, y);
         Point last = activeStroke.getLast();
-        if (Math.hypot(current.x() - last.x(), current.y() - last.y()) < 1.0 / size()) {
+        if (Math.hypot(current.x() - last.x(), current.y() - last.y()) < .5 / size()) {
             return;
         }
-        if (activeStroke.size() == AonDrawing.MAX_POINTS) {
-            for (int index = activeStroke.size() - 2; index > 0; index -= 2) {
-                activeStroke.remove(index);
-            }
+        if (activeStroke.size() == MAX_CAPTURE_POINTS) {
+            List<Point> retained = StrokeInk.reduce(activeStroke, RETAINED_CAPTURE_POINTS);
+            activeStroke.clear();
+            activeStroke.addAll(retained);
         }
         activeStroke.add(current);
+        activePreview = null;
     }
 
     private Point point(double x, double y) {
@@ -213,7 +221,7 @@ final class RuneCanvas extends Screen {
                 strokes.addAll(glyphs.removeLast());
             }
             if (!strokes.isEmpty()) {
-                strokes.removeLast();
+                completedPreviews.remove(strokes.removeLast());
                 arguments.remove(glyphs.size());
                 editingPart = null;
             }
@@ -241,7 +249,7 @@ final class RuneCanvas extends Screen {
         }
         editingGlyph = strokes.isEmpty() ? glyphs.size() - 1 : glyphs.size();
         var ink = strokes.isEmpty() ? glyphs.getLast() : strokes;
-        FocusComponent component = FocusComponent.recognize(ink);
+        FocusComponent component = FocusComponent.recognize(recognitionInk(ink));
         if (component != null) {
             editingPart = Spells.part(minecraft.level.registryAccess(), component.key()).orElse(null);
             editingField = 0;
@@ -249,6 +257,10 @@ final class RuneCanvas extends Screen {
                 editingPart = null;
             }
         }
+    }
+
+    private static List<List<Point>> recognitionInk(List<List<Point>> glyph) {
+        return glyph.stream().map(stroke -> StrokeInk.reduce(stroke, AonDrawing.MAX_POINTS)).toList();
     }
 
     private int argumentCount() {
@@ -327,13 +339,16 @@ final class RuneCanvas extends Screen {
 
         for (var glyph : glyphs) {
             for (var stroke : glyph) {
-                drawStroke(graphics, stroke, CAST_INK, x, y, size);
+                drawStroke(graphics, completedPreviews.computeIfAbsent(stroke, StrokeInk::preview), CAST_INK, x, y, size);
             }
         }
         for (List<Point> stroke : strokes) {
-            drawStroke(graphics, stroke, CAST_INK, x, y, size);
+            drawStroke(graphics, completedPreviews.computeIfAbsent(stroke, StrokeInk::preview), CAST_INK, x, y, size);
         }
-        drawStroke(graphics, activeStroke, CAST_INK, x, y, size);
+        if (activePreview == null) {
+            activePreview = StrokeInk.preview(activeStroke);
+        }
+        drawStroke(graphics, activePreview, CAST_INK, x, y, size);
         drawPageText(graphics, title, x + size / 2, y - 13, size);
 
         int guideCenter = bookLeft() + bookWidth() * 74 / 100;
