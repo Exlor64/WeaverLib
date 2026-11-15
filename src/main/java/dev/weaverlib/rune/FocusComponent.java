@@ -92,11 +92,26 @@ public record FocusComponent(String word, String incantation, SpellPartKind kind
     public static final List<AonRecognition.Template> TEMPLATES = COMPONENTS.values().stream()
         .map(FocusComponent::template).toList();
     private static final AonRecognition.OrderedMatcher MATCHER =
-        new AonRecognition.OrderedMatcher(recognitionTemplates(), AonRecognition.Tolerance.defaults(.065, .013));
+        new AonRecognition.OrderedMatcher(recognitionTemplates(), AonRecognition.Tolerance.defaults(.088, .017));
     private static final AonRecognition.OrderedMatcher BEAM_MATCHER = new AonRecognition.OrderedMatcher(
         List.of(named("beam").template(), new AonRecognition.Template("beam",
             List.of(stroke("15,30 79,30"), stroke("15,67 79,67"), stroke("64,18 90,48 64,79")))),
         AonRecognition.Tolerance.defaults(.065, 0));
+
+    private static final AonRecognition.OutlineMatcher OUTLINES =
+        new AonRecognition.OutlineMatcher(outlineTemplates());
+
+    private static List<AonRecognition.Template> outlineTemplates() {
+        var templates = new ArrayList<>(TEMPLATES);
+        // Consider legacy runes as competitors without converting them into focus components.
+        for (Weave effect : Weave.values()) {
+            templates.add(effect.template());
+        }
+        for (RuneModifier modifier : RuneModifier.values()) {
+            templates.add(modifier.template());
+        }
+        return templates;
+    }
 
     public static FocusComponent named(String name) {
         return COMPONENTS.get(name.toLowerCase(Locale.ROOT).replace('-', '_'));
@@ -113,7 +128,11 @@ public record FocusComponent(String word, String incantation, SpellPartKind kind
         if (match.template() != null) {
             return named(match.template().id());
         }
-        return !match.ambiguous() && matchesBeam(strokes) ? named("beam") : null;
+        if (!match.ambiguous() && matchesBeam(strokes)) {
+            return named("beam");
+        }
+        var outline = OUTLINES.recognize(strokes, .086, .020);
+        return outline.template() == null ? null : named(outline.template().id());
     }
 
     private static boolean matchesBeam(List<List<Point>> strokes) {

@@ -22,7 +22,7 @@ This reference covers the player-facing spell parts in Thaumaturge 1.1.0. Weaver
 
 ## Drawing the glyphs
 
-Choose a glyph with **G** or **Shift+G** to see its exact shape and numbered starts. Draw each stroke continuously from its numbered start, then lift before the next stroke. The recognizer uses stroke count, order, direction, and relative placement. It accepts changes in overall size and canvas position. Start by practicing broad, simple shapes such as Heal. Curves are part of the templates for glyphs such as Fire, Air, and Cloud.
+Choose a glyph with **G** or **Shift+G** to see its exact shape and numbered starts. Draw each stroke continuously from its numbered start, then lift before the next stroke. The recognizer checks stroke count, order, direction, and relative placement first. For a close outline it can also accept a different starting point, direction, or one extra or missing pen lift. If two outlines are too close, the canvas asks for a clearer drawing. It accepts changes in overall size and canvas position. Start by practicing broad, simple shapes such as Heal. Curves are part of the templates for glyphs such as Fire, Air, and Cloud.
 
 ## Native arguments
 

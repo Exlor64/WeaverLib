@@ -302,5 +302,52 @@ public final class AonRecognition {
         }
     }
 
+    /** Outline fallback for close drawings with different stroke direction, order, or pen lifts. */
+    public static final class OutlineMatcher {
+        private record Prepared(Template template, List<List<Point>> points) {}
+
+        private final List<Prepared> templates;
+
+        public OutlineMatcher(List<Template> templates) {
+            this.templates = templates.stream()
+                .map(template -> new Prepared(template, normalized(template.strokes(), .000001)))
+                .filter(template -> !template.points().isEmpty()).toList();
+        }
+
+        public Match recognize(List<List<Point>> strokes, double maximumError, double ambiguityGap) {
+            var points = normalized(strokes, .018);
+            if (points.isEmpty()) {
+                return new Match(null, Double.POSITIVE_INFINITY, false);
+            }
+            Template best = null;
+            double first = Double.POSITIVE_INFINITY;
+            double second = Double.POSITIVE_INFINITY;
+            for (Prepared candidate : templates) {
+                int difference = Math.abs(points.size() - candidate.points().size());
+                if (difference > 1) {
+                    continue;
+                }
+                double penalty = difference * .008;
+                double forward = inkDistance(points, candidate.points()) + penalty;
+                if (forward > Math.min(second, maximumError + ambiguityGap)) {
+                    continue;
+                }
+                double error = Math.max(forward, inkDistance(candidate.points(), points) + penalty);
+                if (error < first) {
+                    second = first;
+                    first = error;
+                    best = candidate.template();
+                } else {
+                    second = Math.min(second, error);
+                }
+            }
+            if (best == null || first > maximumError) {
+                return new Match(null, first, false);
+            }
+            boolean ambiguous = second - first < ambiguityGap;
+            return new Match(ambiguous ? null : best, first, ambiguous);
+        }
+    }
+
     private AonRecognition() {}
 }
