@@ -67,7 +67,8 @@ public final class WeaverClient {
             if (scribing.isDown() && client.isWindowActive() && client.player != null
                     && client.level != null && client.screen == null) {
                 if (canvas == null) {
-                    canvas = new RuneCanvas();
+                    canvas = new RuneCanvas(client.gameDirectory.toPath().resolve("weaverlib")
+                        .resolve("rune-guides").resolve(client.player.getUUID() + ".txt"));
                 }
                 canvas.setCanvasKey(scribing.getKey());
                 client.setScreen(canvas);

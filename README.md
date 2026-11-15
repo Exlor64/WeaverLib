@@ -1,10 +1,16 @@
-# WeaverLib 0.1.21
+# WeaverLib 0.1.22
 
 An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and Java 21. By Ex.
 
 ## Build and install
 
 Run `gradlew.bat build` on Windows or `./gradlew build` on Linux/macOS with a Java 21 JDK. Install the JAR from `build/libs` on the server and each client alongside [Thaumaturge 1.1.0 for NeoForge 1.21.1](https://www.curseforge.com/minecraft/mc-mods/thaumaturge/files/9452543), Curios, and Lithostitched. Gradle downloads the pinned development dependencies. For development launches, use `gradlew.bat runClient` or `gradlew.bat runServer` with Java 21.
+
+## Rune guide
+
+Draw a rune freehand and finish it with **Tab** or release the canvas key. A recognized rune is saved in your guide for this Minecraft profile on this installation. Open the guide with **G** and scroll through learned runes.
+
+Right-click the canvas to center a copy of the selected rune at the pointer. Drag away from the click to enlarge it and release to place it. Use the middle mouse button if right-click is already used by the canvas. Placed runes use the same spell rules as drawings. **Ctrl+Z** removes a placed rune in one step.
 
 ## Casting
 
@@ -60,7 +66,7 @@ Native effects, deliveries, modifiers, and flows have Latin-inspired chat words 
 
 ## Inscribed items
 
-Hold a single item in your main hand. Draw **Inscribe** first, press **Tab**, then draw the spell normally. Put the spell's main rune near the center and its other runes clockwise around it. Inscribe's position is ignored when ordering the stored spell. Open the guide with **G** and scroll to **Inscribe** to see its three strokes. You can also say `incant insculpe cura auge fulgor` to bind Heal + Amplify + Beam. The earlier word `inscribe` still works.
+Hold a single item in your main hand. Draw **Inscribe** first, press **Tab**, then draw the spell normally. Put the spell's main rune near the center and its other runes clockwise around it. Inscribe's position is ignored when ordering the stored spell. Once you have drawn **Inscribe**, open the guide with **G** and scroll to it to review its three strokes. You can also say `incant insculpe cura auge fulgor` to bind Heal + Amplify + Beam. The earlier word `inscribe` still works.
 
 Inscribe requires the Warp unlock and costs **150 Vis** from the local aura. It binds the spell without casting it. An item can hold one inscription. Its tooltip shows the stored incantation or rune names, the battery charge, and the casting multiplier.
 
