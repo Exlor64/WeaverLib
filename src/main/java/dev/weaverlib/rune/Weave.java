@@ -1,5 +1,7 @@
 package dev.weaverlib.rune;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import dev.weaverlib.rune.AonDrawing.Point;
 import java.util.Arrays;
 import java.util.List;
@@ -18,6 +20,11 @@ public enum Weave {
                 new Point(.31, .40), new Point(.26, .42), new Point(.21, .40),
                 new Point(.18, .34), new Point(.21, .28), new Point(.26, .26))
     ));
+
+    public static final Codec<Weave> CODEC = Codec.STRING.comapFlatMap(word -> {
+        Weave weave = fromWords(word);
+        return weave == null ? DataResult.error(() -> "Unknown weave " + word) : DataResult.success(weave);
+    }, Weave::word);
 
     private static final List<AonRecognition.Template> TEMPLATES =
         Arrays.stream(values()).map(Weave::template).toList();

@@ -3,7 +3,7 @@
   "minVersion": "0.8",
   "package": "dev.weaverlib.mixin",
   "compatibilityLevel": "JAVA_21",
-  "mixins": ["IncantationChatMixin"],
+  "mixins": ["IncantationChatMixin", "SpellEngineMixin", "RechargePedestalMixin", "CloningRecipeMixin", "CartographyTableMixin"],
   "client": ["FocusPaletteMixin"],
   "injectors": {
     "defaultRequire": 1

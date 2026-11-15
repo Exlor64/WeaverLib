@@ -48,11 +48,19 @@ final class LeapVis {
         float surcharge = streak.surcharge(grounded);
         streak.lastActivation = new WeakReference<>(context);
         streak.paid = false;
-        if (surcharge > 0) {
+        var source = Inscriptions.sourceId(context.state());
+        if (source != null) {
+            if (!Inscriptions.payContinuation(caster, source, surcharge)) {
+                if (!EternalSpells.stopUnpaidLeap(caster, context.castId(), context.state())) {
+                    caster.displayClientMessage(Component.translatable("weaverlib.inscription_leap_no_vis"), true);
+                }
+                return false;
+            }
+        } else if (surcharge > 0) {
             try (Transaction payment = Transaction.openRoot()) {
                 float drained = AuraHelper.drainVis(caster.serverLevel(), caster.blockPosition(), surcharge, payment);
                 if (!(drained >= surcharge)) {
-                    if (!EternalSpells.stopUnpaidLeap(caster, context.castId())) {
+                    if (!EternalSpells.stopUnpaidLeap(caster, context.castId(), context.state())) {
                         caster.displayClientMessage(Component.translatable("weaverlib.leap_airborne_vis", surcharge), true);
                     }
                     return false;

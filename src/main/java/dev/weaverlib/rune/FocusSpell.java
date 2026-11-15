@@ -25,6 +25,14 @@ public final class FocusSpell {
     private FocusSpell() {}
 
     public static Spell fromWords(String phrase, HolderLookup.Provider registries) {
+        return compile(wordInputs(phrase), registries);
+    }
+
+    public static Compiled readWords(String phrase, HolderLookup.Provider registries) {
+        return compiled(wordInputs(phrase), registries);
+    }
+
+    private static List<PartInput> wordInputs(String phrase) {
         String[] words = phrase.strip().toLowerCase(Locale.ROOT).split("(?U)\\s+");
         if (words.length > AonDrawing.MAX_GLYPHS) {
             throw invalid("focus_layout");
@@ -44,11 +52,20 @@ public final class FocusSpell {
             }
             parts.add(new PartInput(part, matcher.group(2) == null ? "" : matcher.group(2)));
         }
-        return compile(parts, registries);
+        return parts;
     }
 
     public static Spell fromRunes(List<List<List<Point>>> glyphs, List<String> arguments,
             HolderLookup.Provider registries) {
+        return compile(runeInputs(glyphs, arguments), registries);
+    }
+
+    public static Compiled readRunes(List<List<List<Point>>> glyphs, List<String> arguments,
+            HolderLookup.Provider registries) {
+        return compiled(runeInputs(glyphs, arguments), registries);
+    }
+
+    private static List<PartInput> runeInputs(List<List<List<Point>>> glyphs, List<String> arguments) {
         List<PartInput> parts = new ArrayList<>();
         for (int index : AonDrawing.clockwiseOrder(glyphs)) {
             var glyph = glyphs.get(index);
@@ -60,13 +77,28 @@ public final class FocusSpell {
                 throw invalid("unknown_rune");
             }
         }
-        return compile(parts, registries);
+        return parts;
     }
+
+    private static Compiled compiled(List<PartInput> parts, HolderLookup.Provider registries) {
+        Spell spell = compile(parts, registries);
+        var phrase = new java.util.StringJoiner(" ", "incant ", "");
+        for (PartInput input : parts) {
+            String arguments = input.arguments();
+            phrase.add(input.component().incantation() + (arguments.isEmpty() ? "" : "[" + arguments + "]"));
+        }
+        return new Compiled(spell, phrase.toString());
+    }
+
+    public record Compiled(Spell spell, String incantation) {}
 
     private static Spell compile(List<PartInput> parts, HolderLookup.Provider registries) {
         var stack = new ArrayDeque<SpellNode>();
         for (PartInput input : parts) {
             FocusComponent component = input.component();
+            if (component.word().equals("inscribe")) {
+                throw invalid("inscribe_layout");
+            }
             SpellPart part = Spells.part(registries, component.key())
                 .filter(found -> !found.hidden() && found.kind() == component.kind())
                 .orElseThrow(() -> invalid("focus_unavailable"));

@@ -7,6 +7,7 @@ import com.leclowndu93150.thaumaturge.api.spell.Spells;
 import com.leclowndu93150.thaumaturge.api.spell.cast.CastContext;
 import com.leclowndu93150.thaumaturge.api.spell.cast.SpellContinuation;
 import com.leclowndu93150.thaumaturge.api.spell.cast.SpellTarget;
+import com.leclowndu93150.thaumaturge.api.spell.cast.SpellState;
 import com.leclowndu93150.thaumaturge.api.spell.event.SpellNodeEvent;
 import com.leclowndu93150.thaumaturge.api.transaction.Transaction;
 import dev.weaverlib.WeaverLib;
@@ -111,14 +112,10 @@ public final class EternalSpells {
             return;
         }
 
-        try (Transaction payment = Transaction.openRoot()) {
-            float drained = AuraHelper.drainVis(session.level, player.blockPosition(), pulse.cost(), payment);
-            if (!(drained >= pulse.cost())) {
-                player.removeData(SESSION);
-                notify(player, "eternal_no_vis");
-                return;
-            }
-            payment.commit();
+        if (!payPulse(player, session.level, pulse)) {
+            player.removeData(SESSION);
+            notify(player, noVisMessage(pulse.continuation().state()));
+            return;
         }
 
         session.nextTick = session.level.getGameTime() + pulse.interval();
@@ -129,13 +126,32 @@ public final class EternalSpells {
             continuation.caster(), session.repeatingCastId), targets);
     }
 
-    static boolean stopUnpaidLeap(ServerPlayer player, UUID castId) {
+    private static boolean payPulse(ServerPlayer player, ServerLevel level, Pulse pulse) {
+        UUID source = Inscriptions.sourceId(pulse.continuation().state());
+        if (source != null) {
+            return Inscriptions.payContinuation(player, source, pulse.cost());
+        }
+        try (Transaction payment = Transaction.openRoot()) {
+            float drained = AuraHelper.drainVis(level, player.blockPosition(), pulse.cost(), payment);
+            if (!(drained >= pulse.cost())) {
+                return false;
+            }
+            payment.commit();
+            return true;
+        }
+    }
+
+    private static String noVisMessage(SpellState state) {
+        return Inscriptions.sourceId(state) == null ? "eternal_no_vis" : "inscription_eternal_no_vis";
+    }
+
+    static boolean stopUnpaidLeap(ServerPlayer player, UUID castId, SpellState state) {
         Session session = player.getExistingData(SESSION).orElse(null);
         if (session == null || (!castId.equals(session.castId) && !castId.equals(session.repeatingCastId))) {
             return false;
         }
         player.removeData(SESSION);
-        notify(player, "eternal_no_vis");
+        notify(player, noVisMessage(state));
         return true;
     }
 

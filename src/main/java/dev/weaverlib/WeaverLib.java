@@ -15,7 +15,12 @@ import dev.weaverlib.rune.FocusComponent;
 import dev.weaverlib.rune.FocusSpell;
 import dev.weaverlib.rune.RuneSpell;
 import dev.weaverlib.rune.Weave;
+import com.leclowndu93150.thaumaturge.api.items.RechargeAccess;
+import com.leclowndu93150.thaumaturge.api.spell.SpellSummary;
+import com.mojang.datafixers.util.Either;
 import dev.weaverlib.spell.EternalSpells;
+import dev.weaverlib.spell.InscribedSpell;
+import dev.weaverlib.spell.Inscriptions;
 import dev.weaverlib.spell.WeaverParts;
 import java.util.Comparator;
 import java.util.List;
@@ -56,6 +61,7 @@ public final class WeaverLib {
     public WeaverLib(IEventBus modBus, ModContainer container) {
         WarpUnlock.register(modBus, container);
         WeaverParts.register(modBus);
+        Inscriptions.register(modBus);
         modBus.addListener(this::registerPayloads);
         NeoForge.EVENT_BUS.addListener(this::onLogout);
     }
@@ -77,10 +83,17 @@ public final class WeaverLib {
             castHalt(caster);
             return true;
         }
-        if (beginAttempt(caster)) {
+        if (beginAttempt(caster, true)) {
+            if (words.length == 2) {
+                String[] phrase = words[1].strip().split("(?U)\\s+", 2);
+                if (phrase[0].equalsIgnoreCase("inscribe")) {
+                    inscribeWords(caster, phrase.length == 2 ? phrase[1] : "");
+                    return true;
+                }
+            }
             Weave spell = words.length == 2 ? Weave.fromWords(words[1]) : null;
             if (spell != null) {
-                cast(caster, RuneSpell.basic(spell, 1.0));
+                cast(caster, RuneSpell.basic(spell, 1.0), ItemStack.EMPTY);
             } else if (words.length == 2) {
                 Spell focus;
                 try {
@@ -89,7 +102,7 @@ public final class WeaverLib {
                     message(caster, invalidSpell.getMessage());
                     return true;
                 }
-                castFocus(caster, focus);
+                castFocus(caster, focus, ItemStack.EMPTY);
             } else {
                 message(caster, "unknown_words");
             }
@@ -98,17 +111,27 @@ public final class WeaverLib {
     }
 
     private void registerPayloads(RegisterPayloadHandlersEvent event) {
-        event.registrar("4").playToServer(RuneCast.TYPE, RuneCast.CODEC, (payload, context) -> {
+        var registrar = event.registrar("5");
+        registrar.playToServer(CastInscription.TYPE, CastInscription.CODEC, (payload, context) -> {
+            if (context.player() instanceof ServerPlayer player) {
+                castInscription(player, payload.inscriptionId());
+            }
+        });
+        registrar.playToServer(RuneCast.TYPE, RuneCast.CODEC, (payload, context) -> {
             if (context.player() instanceof ServerPlayer player) {
                 if (EternalSpells.isSustaining(player) && isStandaloneHalt(payload)) {
                     castHalt(player);
                     return;
                 }
-                if (!beginAttempt(player)) {
+                if (!beginAttempt(player, true)) {
                     return;
                 }
                 FocusComponent first = FocusComponent.recognize(payload.glyphs().getFirst());
                 if (first != null) {
+                    if (first.word().equals("inscribe")) {
+                        inscribeRunes(player, payload);
+                        return;
+                    }
                     if (first.word().equals("halt") && payload.glyphs().size() == 1
                             && payload.arguments().getFirst().isEmpty()) {
                         castHalt(player);
@@ -121,7 +144,7 @@ public final class WeaverLib {
                         message(player, invalidRune.getMessage());
                         return;
                     }
-                    castFocus(player, focus);
+                    castFocus(player, focus, ItemStack.EMPTY);
                 } else {
                     RuneSpell spell;
                     try {
@@ -133,7 +156,7 @@ public final class WeaverLib {
                         message(player, invalidRune.getMessage());
                         return;
                     }
-                    cast(player, spell);
+                    cast(player, spell, ItemStack.EMPTY);
                 }
             }
         });
@@ -171,25 +194,110 @@ public final class WeaverLib {
         }
     }
 
-    private static boolean beginAttempt(ServerPlayer player) {
+    private static void inscribeWords(ServerPlayer player, String phrase) {
+        if (phrase.isEmpty()) {
+            message(player, "inscribe_layout");
+            return;
+        }
+        Weave effect = Weave.fromWords(phrase);
+        if (effect != null) {
+            inscribeLegacy(player, RuneSpell.basic(effect, 1.0));
+            return;
+        }
+        try {
+            inscribeFocus(player, FocusSpell.readWords(phrase, player.registryAccess()));
+        } catch (IllegalArgumentException invalidSpell) {
+            message(player, invalidSpell.getMessage());
+        }
+    }
+
+    private static void inscribeRunes(ServerPlayer player, RuneCast payload) {
+        int size = payload.glyphs().size();
+        if (size < 2 || !payload.arguments().getFirst().isEmpty()) {
+            message(player, "inscribe_layout");
+            return;
+        }
+        var glyphs = payload.glyphs().subList(1, size);
+        var arguments = payload.arguments().subList(1, size);
+        try {
+            if (FocusComponent.recognize(glyphs.getFirst()) != null) {
+                inscribeFocus(player, FocusSpell.readRunes(glyphs, arguments, player.registryAccess()));
+            } else {
+                if (arguments.stream().anyMatch(argument -> !argument.isEmpty())) {
+                    throw new IllegalArgumentException("focus_arguments");
+                }
+                inscribeLegacy(player, RuneSpell.compile(glyphs));
+            }
+        } catch (IllegalArgumentException invalidSpell) {
+            message(player, invalidSpell.getMessage());
+        }
+    }
+
+    private static void inscribeFocus(ServerPlayer player, FocusSpell.Compiled compiled) {
+        if (analyze(player, compiled.spell()) != null) {
+            inscribe(player, Either.left(compiled.spell()), compiled.incantation());
+        }
+    }
+
+    private static void inscribeLegacy(ServerPlayer player, RuneSpell spell) {
+        inscribe(player, Either.right(spell), spell.inscriptionName());
+    }
+
+    private static void inscribe(ServerPlayer player, Either<Spell, RuneSpell> spell, String words) {
+        ItemStack stack = player.getMainHandItem();
+        if (stack.isEmpty() || stack.getCount() != 1) {
+            message(player, "inscribe_single_item");
+            return;
+        }
+        if (Inscriptions.get(stack) != null) {
+            message(player, "inscribe_already_bound");
+            return;
+        }
+        var inscription = new InscribedSpell(UUID.randomUUID(), spell, words, Inscriptions.efficientRecipe(player, stack));
+        if (payAmbient(player, Inscriptions.FEE)) {
+            Inscriptions.bind(stack, inscription);
+            message(player, "inscribe_bound", words);
+        }
+    }
+
+    private static void castInscription(ServerPlayer player, UUID id) {
+        ItemStack stack = player.getMainHandItem();
+        var inscription = Inscriptions.get(stack);
+        if (player.isShiftKeyDown() || inscription == null || !id.equals(inscription.id()) || stack.getCount() != 1
+                || !beginAttempt(player, false)) {
+            return;
+        }
+        inscription.spell().ifLeft(spell -> castFocus(player, spell, stack))
+            .ifRight(spell -> cast(player, spell, stack));
+    }
+
+    private static boolean beginAttempt(ServerPlayer player, boolean checkWarp) {
         int now = player.serverLevel().getServer().getTickCount();
         Integer until = NEXT_ATTEMPT.get(player.getUUID());
         if (!player.isAlive() || player.isSpectator() || (until != null && now - until < 0)) {
             return false;
         }
         NEXT_ATTEMPT.put(player.getUUID(), now + 20);
-        return WarpUnlock.check(player, true);
+        return !checkWarp || WarpUnlock.check(player, true);
     }
 
-    private static void castFocus(ServerPlayer player, Spell spell) {
+    private static SpellSummary analyze(ServerPlayer player, Spell spell) {
+        var summary = Spells.analyze(spell, RUNE_FOCUS_LIMITS, player.registryAccess(), player);
+        if (summary.valid()) {
+            return summary;
+        }
+        summary.problems().stream().filter(SpellProblem::fatal).findFirst()
+            .ifPresent(problem -> player.displayClientMessage(problem.message(), true));
+        return null;
+    }
+
+    private static void castFocus(ServerPlayer player, Spell spell, ItemStack source) {
         if (CasterManager.isOnCooldown(player)) {
             message(player, "focus_cooldown");
             return;
         }
-        var summary = Spells.analyze(spell, RUNE_FOCUS_LIMITS, player.registryAccess(), player);
-        if (!summary.valid()) {
-            summary.problems().stream().filter(SpellProblem::fatal).findFirst()
-                .ifPresent(problem -> player.displayClientMessage(problem.message(), true));
+        var summary = analyze(player, spell);
+        if (summary == null) {
             return;
         }
 
@@ -206,30 +314,46 @@ public final class WeaverLib {
             return;
         }
 
-        var pre = SpellEngine.firePre(player, ItemStack.EMPTY, spell, 1, summary.vis());
+        var pre = SpellEngine.firePre(player, source, spell, 1, summary.vis());
         if (pre.isCanceled() || !Float.isFinite(pre.visCost()) || !Float.isFinite(pre.power())
-                || pre.visCost() < 0 || pre.power() <= 0) {
+                || pre.visCost() < 0 || pre.power() <= 0 || !payCast(player, source, pre.visCost())) {
             return;
-        }
-        float cost = pre.visCost();
-        if (cost > 0) {
-            try (Transaction payment = Transaction.openRoot()) {
-                float drained = AuraHelper.drainVis(player.serverLevel(), player.blockPosition(), cost, payment);
-                if (!(drained >= cost)) {
-                    message(player, "insufficient_vis", cost);
-                    return;
-                }
-                payment.commit();
-            }
         }
 
         int now = player.serverLevel().getServer().getTickCount();
         NEXT_ATTEMPT.put(player.getUUID(), now + Math.max(20, summary.cooldown()));
         CasterManager.setCooldown(player, summary.cooldown());
-        SpellEngine.execute(player, ItemStack.EMPTY, spell, List.of(SpellTarget.origin(player)), pre.power());
+        SpellEngine.execute(player, source, spell, List.of(SpellTarget.origin(player)), pre.power());
     }
 
-    private static boolean cast(ServerPlayer player, RuneSpell spell) {
+    private static boolean payCast(ServerPlayer player, ItemStack source, float normalCost) {
+        var inscription = Inscriptions.get(source);
+        if (inscription == null) {
+            return payAmbient(player, normalCost);
+        }
+        int cost = inscription.cost(normalCost);
+        if (!RechargeAccess.spendVis(source, cost)) {
+            message(player, "inscription_no_vis", cost, RechargeAccess.storedVis(source));
+            return false;
+        }
+        return true;
+    }
+
+    private static boolean payAmbient(ServerPlayer player, float cost) {
+        if (cost > 0) {
+            try (Transaction payment = Transaction.openRoot()) {
+                float drained = AuraHelper.drainVis(player.serverLevel(), player.blockPosition(), cost, payment);
+                if (!(drained >= cost)) {
+                    message(player, "insufficient_vis", cost);
+                    return false;
+                }
+                payment.commit();
+            }
+        }
+        return true;
+    }
+
+    private static boolean cast(ServerPlayer player, RuneSpell spell, ItemStack source) {
         LivingEntity anchor = spell.gaze() ? gazeTarget(player) : player;
         if (anchor == null) {
             message(player, "no_target");
@@ -258,13 +382,8 @@ public final class WeaverLib {
 
         int cost = (int) Math.ceil(spell.effect().cost() * (spell.surge() ? 1.5 : 1))
             * targets.size() + (spell.pulse() ? 2 : 0);
-        try (Transaction payment = Transaction.openRoot()) {
-            float drained = AuraHelper.drainVis(player.serverLevel(), player.blockPosition(), cost, payment);
-            if (!(drained >= cost)) {
-                message(player, "insufficient_vis", cost);
-                return false;
-            }
-            payment.commit();
+        if (!payCast(player, source, cost)) {
+            return false;
         }
 
         for (LivingEntity target : targets) {
@@ -273,7 +392,8 @@ public final class WeaverLib {
                 case SANA -> target.heal((float) (4 * strength));
             }
         }
-        message(player, "cast", spell.effect().word(), cost);
+        var inscription = Inscriptions.get(source);
+        message(player, "cast", spell.effect().word(), inscription == null ? cost : inscription.cost(cost));
         return true;
     }
 

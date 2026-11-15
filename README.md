@@ -1,4 +1,4 @@
-# WeaverLib 0.1.16
+# WeaverLib 0.1.17
 
 An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and Java 21. By Ex.
 
@@ -51,3 +51,15 @@ Lux affects players. Sana can heal living targets. Pulse charges per affected ta
 ## Thaumaturge focus magic
 
 Native effects, deliveries, modifiers, and flows have Latin-inspired chat words and drawn runes. For example, `incant cura auge fulgor` casts Heal through Amplify and Beam. Old English spell words still work. See the [component and argument reference](docs/thaumaturge-components.md) for the full catalog, spell construction, settings, and aspect choices.
+
+## Inscribed items
+
+Hold a single item in your main hand. Draw **Inscribe** first, press **Tab**, then draw the spell normally. Put the spell's main rune near the center and its other runes clockwise around it. Inscribe's position is ignored when ordering the stored spell. Select **Inscribe** in the canvas guide with **G** to see the three strokes. You can also say `incant inscribe cura auge fulgor` to bind Heal + Amplify + Beam.
+
+Inscribe requires the Warp unlock and costs **150 Vis** from the local aura. It binds the spell without casting it. An item can hold one inscription. Its tooltip shows the stored incantation or rune names, the battery charge, and the casting multiplier.
+
+A new battery starts empty and holds **200 Vis**. An item with a native Vis battery keeps its existing charge and capacity. Charge it with Thaumaturge's **Recharge Pedestal** or **Vis Amulet**. Right-click the pedestal to place the item on it. Inscribed items do not refill directly from ambient Vis while held.
+
+Right-click with the item in your main hand to cast from its battery. Sneak-right-click to use the item normally. Anyone holding the item can activate it. A cast costs **1.5×** its normal Vis cost, or **1.2×** if a loaded recipe for that item requires a thaumium or void-metal ingredient. Thaumaturge stores whole Vis charges, so costs round up. Inscribed Eternal pulses and Leap surcharges also draw from that item's battery.
+
+Vanilla map, written-book, and banner copying recipes reject inscribed items so charging one item cannot create multiple batteries.

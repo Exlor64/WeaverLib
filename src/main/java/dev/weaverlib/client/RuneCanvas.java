@@ -285,7 +285,8 @@ final class RuneCanvas extends Screen {
         FocusComponent component = FocusComponent.recognize(ink);
         String name = component == null ? null : component.word();
         if (name == null) {
-            if (number == 1) {
+            if (number == 1 || (number == 2 && !glyphs.isEmpty()
+                    && FocusComponent.recognize(recognitionInk(glyphs.getFirst())) == FocusComponent.named("inscribe"))) {
                 var effect = Weave.recognize(ink);
                 if (effect.template() != null) {
                     name = effect.template().id();

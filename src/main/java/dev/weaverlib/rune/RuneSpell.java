@@ -1,10 +1,27 @@
 package dev.weaverlib.rune;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.weaverlib.rune.AonDrawing.Point;
 import dev.weaverlib.rune.RuneModifier.Slot;
 import java.util.List;
 
 public record RuneSpell(Weave effect, double potency, boolean pulse, boolean gaze, boolean surge) {
+    public static final Codec<RuneSpell> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+        Weave.CODEC.fieldOf("effect").forGetter(RuneSpell::effect),
+        Codec.doubleRange(.5, 1).fieldOf("potency").forGetter(RuneSpell::potency),
+        Codec.BOOL.fieldOf("pulse").forGetter(RuneSpell::pulse),
+        Codec.BOOL.fieldOf("gaze").forGetter(RuneSpell::gaze),
+        Codec.BOOL.fieldOf("surge").forGetter(RuneSpell::surge)
+    ).apply(instance, RuneSpell::new));
+
+    public String inscriptionName() {
+        if (!pulse && !gaze && !surge) {
+            return "incant " + effect.word();
+        }
+        return effect.word() + (pulse ? " · pulse" : "") + (gaze ? " · gaze" : "") + (surge ? " · surge" : "");
+    }
+
     public static RuneSpell basic(Weave effect, double potency) {
         return new RuneSpell(effect, potency, false, false, false);
     }
