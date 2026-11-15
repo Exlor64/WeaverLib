@@ -4,6 +4,7 @@
   "package": "dev.weaverlib.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": ["IncantationChatMixin"],
+  "client": ["FocusPaletteMixin"],
   "injectors": {
     "defaultRequire": 1
   }

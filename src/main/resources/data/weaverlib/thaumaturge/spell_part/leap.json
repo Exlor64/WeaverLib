@@ -1,0 +1,9 @@
+{
+  "behavior": {"type": "weaverlib:leap"},
+  "icon": "thaumaturge:textures/foci/air.png",
+  "aspect": "thaumaturge:motus",
+  "color": 9162227,
+  "complexity": 2,
+  "fx": "thaumaturge:gust",
+  "settings": [{"key": "strength", "min": 1, "max": 4, "default": 1, "complexity": 2.0}]
+}

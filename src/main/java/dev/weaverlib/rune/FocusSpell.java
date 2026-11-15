@@ -101,7 +101,10 @@ public final class FocusSpell {
         }
         if (subtree.stream().noneMatch(part -> part.kind() == SpellPartKind.DELIVERY)) {
             boolean self = subtree.stream().filter(part -> part.kind() == SpellPartKind.EFFECT)
-                .allMatch(part -> part.word().equals("heal") || part.word().equals("imbue"));
+                .allMatch(part -> switch (part.word()) {
+                    case "heal", "imbue", "leap", "halt" -> true;
+                    default -> false;
+                });
             return SpellNode.of(FocusComponent.named(self ? "self" : "touch").key()).then(node);
         }
         return node.withChildren(node.children().stream().map(FocusSpell::addDefaultDelivery).toList());

@@ -5,6 +5,7 @@ import com.leclowndu93150.thaumaturge.api.transaction.Transaction;
 import com.leclowndu93150.thaumaturge.api.casters.FocusCaster;
 import com.leclowndu93150.thaumaturge.api.spell.FocusTier;
 import com.leclowndu93150.thaumaturge.api.spell.Spell;
+import com.leclowndu93150.thaumaturge.api.spell.SpellNode;
 import com.leclowndu93150.thaumaturge.api.spell.SpellProblem;
 import com.leclowndu93150.thaumaturge.api.spell.Spells;
 import com.leclowndu93150.thaumaturge.api.spell.cast.SpellTarget;
@@ -14,6 +15,8 @@ import dev.weaverlib.rune.FocusComponent;
 import dev.weaverlib.rune.FocusSpell;
 import dev.weaverlib.rune.RuneSpell;
 import dev.weaverlib.rune.Weave;
+import dev.weaverlib.spell.EternalSpells;
+import dev.weaverlib.spell.WeaverParts;
 import java.util.Comparator;
 import java.util.List;
 import java.util.HashMap;
@@ -52,6 +55,7 @@ public final class WeaverLib {
 
     public WeaverLib(IEventBus modBus, ModContainer container) {
         WarpUnlock.register(modBus, container);
+        WeaverParts.register(modBus);
         modBus.addListener(this::registerPayloads);
         NeoForge.EVENT_BUS.addListener(this::onLogout);
     }
@@ -69,6 +73,10 @@ public final class WeaverLib {
             }
         }
 
+        if (words.length == 2 && words[1].strip().equalsIgnoreCase("halt")) {
+            castHalt(caster);
+            return true;
+        }
         if (beginAttempt(caster)) {
             Weave spell = words.length == 2 ? Weave.fromWords(words[1]) : null;
             if (spell != null) {
@@ -91,8 +99,21 @@ public final class WeaverLib {
 
     private void registerPayloads(RegisterPayloadHandlersEvent event) {
         event.registrar("4").playToServer(RuneCast.TYPE, RuneCast.CODEC, (payload, context) -> {
-            if (context.player() instanceof ServerPlayer player && beginAttempt(player)) {
-                if (FocusComponent.recognize(payload.glyphs().getFirst()) != null) {
+            if (context.player() instanceof ServerPlayer player) {
+                if (EternalSpells.isSustaining(player) && isStandaloneHalt(payload)) {
+                    castHalt(player);
+                    return;
+                }
+                if (!beginAttempt(player)) {
+                    return;
+                }
+                FocusComponent first = FocusComponent.recognize(payload.glyphs().getFirst());
+                if (first != null) {
+                    if (first.word().equals("halt") && payload.glyphs().size() == 1
+                            && payload.arguments().getFirst().isEmpty()) {
+                        castHalt(player);
+                        return;
+                    }
                     Spell focus;
                     try {
                         focus = FocusSpell.fromRunes(payload.glyphs(), payload.arguments(), player.registryAccess());
@@ -118,8 +139,36 @@ public final class WeaverLib {
         });
     }
 
+    private static boolean isStandaloneHalt(RuneCast payload) {
+        if (payload.glyphs().size() != 1 || !payload.arguments().getFirst().isEmpty()) {
+            return false;
+        }
+        FocusComponent part = FocusComponent.recognize(payload.glyphs().getFirst());
+        return part != null && part.word().equals("halt");
+    }
+
+    private static void castHalt(ServerPlayer player) {
+        if (!player.isAlive() || player.isSpectator() || !EternalSpells.isSustaining(player)
+                || !WarpUnlock.check(player, false)) {
+            return;
+        }
+        var halt = FocusComponent.named("halt").key();
+        if (Spells.part(player.registryAccess(), halt).filter(part -> !part.hidden()).isEmpty()) {
+            return;
+        }
+        Spell spell = Spell.empty().withRoot(SpellNode.of(Spell.ORIGIN).then(SpellNode.of(halt)));
+        var pre = SpellEngine.firePre(player, ItemStack.EMPTY, spell, 1, 0);
+        if (!pre.isCanceled()) {
+            SpellEngine.execute(player, ItemStack.EMPTY, spell,
+                List.of(SpellTarget.entity(player, player.getLookAngle())), 1);
+        }
+    }
+
     private void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         NEXT_ATTEMPT.remove(event.getEntity().getUUID());
+        if (event.getEntity() instanceof ServerPlayer player) {
+            EternalSpells.clear(player);
+        }
     }
 
     private static boolean beginAttempt(ServerPlayer player) {

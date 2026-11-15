@@ -1,4 +1,4 @@
-# WeaverLib 0.1.12
+# WeaverLib 0.1.13
 
 An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and Java 21. By Ex.
 

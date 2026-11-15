@@ -107,3 +107,20 @@ Burst uses strike affinities. Imbue uses boon affinities. Thaumaturge only accep
 | `imbue` | `aer`, `aqua`, `herba`, `ignis`, `lux`, `motus`, `ordo`, `perditio`, `potentia`, `tenebrae`, `terra`, `victus`, `volatus` |
 
 Thaumaturge supplies the hidden Origin and the boss-only parts internally.
+
+## WeaverLib components
+
+These components are available to drawn runes and spoken incantations. They use Thaumaturge's spell tree, validation, and effects system.
+
+| Component | Behavior | Optional argument |
+| --- | --- | --- |
+| `leap` | Pushes a living target along its current look direction, including up or down. Defaults to Self. | `strength` 1–4, default **1**. |
+| `eternal` | Runs its wrapped subspell immediately, then repeats it at the same power on the original targets. Each pulse charges the wrapped subspell's Vis cost from the caster's current chunk, with a minimum of 1 Vis. | `interval` 10–100 ticks, step 10, default **20** (one second). |
+| `halt` | Stops an active or pending Eternal loop. Alone, Halt targets you, costs no Vis, and works during cooldown. Add a delivery to use it on another player at the regular cast cost. | None. |
+
+Each player can sustain one Eternal loop. A new Eternal cast replaces the previous one. Damage to the caster, death, logout, changing dimension, a casting lock, lost targets, or insufficient Vis can stop the loop. Halt prevents future Eternal pulses. Projectiles and effects that already fired follow their normal behavior.
+
+- `incant leap` pushes you along your own look direction.
+- `incant heal eternal[interval=40] self` sustains Heal on yourself every two seconds.
+- `incant halt` ends your loop.
+- `incant halt bolt` attempts to end another player's loop by delivering Halt with Bolt.

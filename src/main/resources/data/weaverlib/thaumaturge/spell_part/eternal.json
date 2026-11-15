@@ -1,0 +1,9 @@
+{
+  "behavior": {"type": "weaverlib:eternal"},
+  "icon": "thaumaturge:textures/foci/echo.png",
+  "aspect": "thaumaturge:permutatio",
+  "color": 10310629,
+  "complexity": 7,
+  "max_per_spell": 1,
+  "settings": [{"key": "interval", "min": 10, "max": 100, "step": 10, "default": 20}]
+}

@@ -7,6 +7,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.serialization.Codec;
+import dev.weaverlib.spell.EternalSpells;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -93,6 +94,9 @@ final class WarpUnlock {
             default -> throw BAD_ACTION.create();
         };
         target.setData(UNLOCKED, unlocked);
+        if (!unlocked) {
+            EternalSpells.clear(target);
+        }
         target.removeData(REVELATION);
         target.sendSystemMessage(Component.translatable(unlocked
             ? "weaverlib.warp_unlocked" : "weaverlib.warp_manual_lock"));

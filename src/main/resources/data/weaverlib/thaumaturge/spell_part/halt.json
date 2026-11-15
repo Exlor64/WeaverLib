@@ -1,0 +1,7 @@
+{
+  "behavior": {"type": "weaverlib:halt"},
+  "icon": "thaumaturge:textures/foci/sieve.png",
+  "color": 7497639,
+  "complexity": 1,
+  "fx": "thaumaturge:sparkle"
+}

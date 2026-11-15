@@ -2,6 +2,7 @@ package dev.weaverlib.rune;
 
 import com.leclowndu93150.thaumaturge.api.spell.part.SpellPart;
 import com.leclowndu93150.thaumaturge.api.spell.part.SpellPartKind;
+import dev.weaverlib.WeaverLib;
 import dev.weaverlib.rune.AonDrawing.Point;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -74,6 +75,13 @@ public record FocusComponent(String word, SpellPartKind kind, ResourceKey<SpellP
         add(SpellPartKind.FLOW, "relay", "17,75 17,44 48,44 48,20 79,20", "72,11 85,20 72,31");
         add(SpellPartKind.FLOW, "delay", "23,18 77,18 69,39:50,50 31,60:23,81 77,81", "77,81 69,61:50,50 31,40:23,18");
         add(SpellPartKind.FLOW, "sieve", "15,20 85,20 59,52 59,75 43,85 43,53 15,20", "28,36 73,36");
+
+        addPart(WeaverLib.ID, SpellPartKind.EFFECT, "leap",
+            "14,78 35,42:57,29 74,17:83,26", "63,16 83,26 70,48");
+        addPart(WeaverLib.ID, SpellPartKind.MODIFIER, "eternal",
+            "49,49 24,16:14,42 3,72:29,76 51,71:72,40 92,16:91,47 92,78:70,75 60,69 49,49");
+        addPart(WeaverLib.ID, SpellPartKind.EFFECT, "halt",
+            "28,16 28,82", "64,16 64,82");
     }
 
     public static final List<AonRecognition.Template> TEMPLATES = COMPONENTS.values().stream()
@@ -152,8 +160,12 @@ public record FocusComponent(String word, SpellPartKind kind, ResourceKey<SpellP
     }
 
     private static void add(SpellPartKind kind, String word, String... paths) {
+        addPart("thaumaturge", kind, word, paths);
+    }
+
+    private static void addPart(String namespace, SpellPartKind kind, String word, String... paths) {
         ResourceKey<SpellPart> key = ResourceKey.create(SpellPart.REGISTRY_KEY,
-            ResourceLocation.fromNamespaceAndPath("thaumaturge", word));
+            ResourceLocation.fromNamespaceAndPath(namespace, word));
         var strokes = Arrays.stream(paths).map(FocusComponent::stroke).toList();
         var template = new AonRecognition.Template(word, strokes);
         COMPONENTS.put(word, new FocusComponent(word, kind, key, template));
