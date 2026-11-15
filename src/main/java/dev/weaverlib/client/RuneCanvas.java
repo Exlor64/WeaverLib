@@ -6,6 +6,10 @@ import dev.weaverlib.RuneCast;
 import dev.weaverlib.rune.AonDrawing;
 import dev.weaverlib.rune.AonDrawing.Point;
 import dev.weaverlib.rune.Weave;
+import dev.weaverlib.rune.RuneModifier;
+import dev.weaverlib.rune.AonRecognition.Template;
+import java.util.Arrays;
+import java.util.stream.Stream;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphics;
@@ -24,6 +28,10 @@ final class RuneCanvas extends Screen {
     private static final int PAGE_TEXT = 0xFF492C21;
     private static final int GUIDE_INK = 0xFFAA8469;
     private static final int CAST_INK = 0xFFA01FDB;
+    private static final List<Template> GUIDES = Stream.concat(
+        Arrays.stream(Weave.values()).map(Weave::template),
+        Arrays.stream(RuneModifier.values()).map(RuneModifier::template)).toList();
+    private final List<List<List<Point>>> glyphs = new ArrayList<>();
     private final List<List<Point>> strokes = new ArrayList<>();
     private final List<Point> activeStroke = new ArrayList<>();
     private final InputConstants.Key canvasKey;
@@ -121,8 +129,12 @@ final class RuneCanvas extends Screen {
     private void castAndClose() {
         finishStroke();
         if (minecraft.isWindowActive() && minecraft.player != null
-                && minecraft.getConnection() != null && !strokes.isEmpty()) {
-            PacketDistributor.sendToServer(new RuneCast(strokes));
+                && minecraft.getConnection() != null && (!strokes.isEmpty() || !glyphs.isEmpty())) {
+            var drawing = new ArrayList<>(glyphs);
+            if (!strokes.isEmpty()) {
+                drawing.add(strokes);
+            }
+            PacketDistributor.sendToServer(new RuneCast(drawing));
         }
         onClose();
     }
@@ -139,7 +151,7 @@ final class RuneCanvas extends Screen {
     private void appendPoint(double x, double y) {
         Point current = point(x, y);
         Point last = activeStroke.getLast();
-        if (Math.hypot(current.x() - last.x(), current.y() - last.y()) < 2.0 / size()) {
+        if (Math.hypot(current.x() - last.x(), current.y() - last.y()) < 1.0 / size()) {
             return;
         }
         if (activeStroke.size() == AonDrawing.MAX_POINTS) {
@@ -160,12 +172,24 @@ final class RuneCanvas extends Screen {
         if (canvasKey.equals(InputConstants.getKey(key, scanCode))) {
             return true;
         }
-        if (key == GLFW.GLFW_KEY_Z && hasControlDown() && activeStroke.isEmpty() && !strokes.isEmpty()) {
-            strokes.removeLast();
+        if (key == GLFW.GLFW_KEY_Z && hasControlDown() && activeStroke.isEmpty()) {
+            if (strokes.isEmpty() && !glyphs.isEmpty()) {
+                strokes.addAll(glyphs.removeLast());
+            }
+            if (!strokes.isEmpty()) {
+                strokes.removeLast();
+            }
+            return true;
+        }
+        if (key == GLFW.GLFW_KEY_TAB && activeStroke.isEmpty()) {
+            if (!strokes.isEmpty() && glyphs.size() < AonDrawing.MAX_GLYPHS - 1) {
+                glyphs.add(List.copyOf(strokes));
+                strokes.clear();
+            }
             return true;
         }
         if (key == GLFW.GLFW_KEY_G) {
-            guide = guide == Weave.values().length - 1 ? -1 : guide + 1;
+            guide = guide == GUIDES.size() - 1 ? -1 : guide + 1;
             return true;
         }
         return super.keyPressed(key, scanCode, modifiers);
@@ -187,35 +211,52 @@ final class RuneCanvas extends Screen {
             graphics.vLine(x + offset, y, y + size, rule);
         }
 
-        if (guide >= 0) {
-            var template = Weave.values()[guide].template().strokes();
-            for (int index = 0; index < template.size(); index++) {
-                List<Point> stroke = template.get(index);
-                drawStroke(graphics, stroke, GUIDE_INK);
-                Point start = stroke.getFirst();
-                graphics.drawString(font, Integer.toString(index + 1),
-                    x + (int) (start.x() * size) - 7, y + (int) (start.y() * size) - 9,
-                    PAGE_TEXT, false);
-            }
+        boolean traceEffect = guide >= 0 && guide < Weave.values().length && glyphs.isEmpty();
+        if (traceEffect) {
+            int side = size / 2;
+            int inset = (size - side) / 2;
+            drawGuide(graphics, GUIDES.get(guide), x + inset, y + inset, side);
         }
 
-        for (List<Point> stroke : strokes) {
-            drawStroke(graphics, stroke, CAST_INK);
+        for (var glyph : glyphs) {
+            for (var stroke : glyph) {
+                drawStroke(graphics, stroke, CAST_INK, x, y, size);
+            }
         }
-        drawStroke(graphics, activeStroke, CAST_INK);
+        for (List<Point> stroke : strokes) {
+            drawStroke(graphics, stroke, CAST_INK, x, y, size);
+        }
+        drawStroke(graphics, activeStroke, CAST_INK, x, y, size);
         drawPageText(graphics, title, x + size / 2, y - 13, size);
 
         int guideCenter = bookLeft() + bookWidth() * 74 / 100;
-        int textY = y + Math.max(0, (size - 66) / 2);
+        int textY = y + Math.max(0, (size - 92) / 2);
         Component guideTitle = guide < 0
             ? Component.translatable("weaverlib.guide_off")
-            : Component.translatable("weaverlib.guide_active", Weave.values()[guide].word());
-        drawPageText(graphics, guideTitle, guideCenter, textY, size);
-        graphics.hLine(guideCenter - size / 3, guideCenter + size / 3, textY + 12, 0x806F4934);
-        drawPageText(graphics, Component.translatable("weaverlib.canvas_cast"), guideCenter, textY + 18, size);
-        drawPageText(graphics, Component.translatable("weaverlib.canvas_guide"), guideCenter, textY + 30, size);
-        drawPageText(graphics, Component.translatable("weaverlib.canvas_undo"), guideCenter, textY + 42, size);
-        drawPageText(graphics, Component.translatable("weaverlib.canvas_cancel"), guideCenter, textY + 54, size);
+            : Component.translatable("weaverlib.guide_active", GUIDES.get(guide).id());
+        drawPageText(graphics, guideTitle, guideCenter, y - 13, size);
+        if (guide >= 0 && !traceEffect) {
+            int preview = Math.max(24, size * 2 / 5);
+            drawGuide(graphics, GUIDES.get(guide), guideCenter - preview / 2, y - 1, preview);
+            textY = y + preview + 2;
+        }
+        drawPageText(graphics, Component.translatable("weaverlib.canvas_slots"), guideCenter, textY, size);
+        drawPageText(graphics, Component.translatable("weaverlib.canvas_next"), guideCenter, textY + 10, size);
+        drawPageText(graphics, Component.translatable("weaverlib.canvas_guide"), guideCenter, textY + 20, size);
+        drawPageText(graphics, Component.translatable("weaverlib.canvas_undo"), guideCenter, textY + 30, size);
+        drawPageText(graphics, Component.translatable("weaverlib.canvas_cast"), guideCenter, textY + 40, size);
+        drawPageText(graphics, Component.translatable("weaverlib.canvas_cancel"), guideCenter, textY + 50, size);
+    }
+
+    private void drawGuide(GuiGraphics graphics, Template template, int x, int y, int side) {
+        for (int index = 0; index < template.strokes().size(); index++) {
+            var stroke = template.strokes().get(index);
+            drawStroke(graphics, stroke, GUIDE_INK, x, y, side);
+            Point start = stroke.getFirst();
+            graphics.drawString(font, Integer.toString(index + 1),
+                x + (int) (start.x() * side) - 6, y + (int) (start.y() * side) - 7,
+                PAGE_TEXT, false);
+        }
     }
 
     private void drawPageText(GuiGraphics graphics, Component text, int center, int y, int maxWidth) {
@@ -224,10 +265,7 @@ final class RuneCanvas extends Screen {
         graphics.drawString(font, line, center - font.width(line) / 2, y, PAGE_TEXT, false);
     }
 
-    private void drawStroke(GuiGraphics graphics, List<Point> stroke, int color) {
-        int side = size();
-        int canvasX = left();
-        int canvasY = top();
+    private void drawStroke(GuiGraphics graphics, List<Point> stroke, int color, int canvasX, int canvasY, int side) {
         var pose = graphics.pose();
         for (int index = 1; index < stroke.size(); index++) {
             Point from = stroke.get(index - 1);

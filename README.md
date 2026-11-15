@@ -1,4 +1,4 @@
-# WeaverLib 0.1.2
+# WeaverLib 0.1.3
 
 An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and Java 21. By Ex.
 
@@ -22,6 +22,20 @@ Hold **K** to open the parchment canvas and **G** to cycle the optional rune gui
 
 Drag with the left mouse button, or the right mouse button if you bind the canvas to left click. Use **Ctrl+Z** to undo a stroke. Release the canvas key to cast, or press **Esc** to cancel. Ordered matches have full potency. Recognizable shapes drawn out of order can cast at half potency for the same Vis cost.
 
-The server recognizes the submitted ink and runs the same spell logic for both inputs. Vis comes from Thaumaturge's aura in the caster's current chunk. Insufficient Vis, unknown inputs, full-health healing and redundant night vision leave the aura unspent. There is a shared one-second interval between attempts. The first release handles one rune at a time.
+The server recognizes the submitted ink and runs the same spell logic for both inputs. Vis comes from Thaumaturge's aura in the caster's current chunk. Insufficient Vis, unknown inputs, full-health healing and redundant night vision leave the aura unspent. There is a shared one-second interval between attempts. Each canvas holds one main effect and up to three optional modifiers.
 
 The geometry matcher is adapted from the MIT-licensed AonDor port kit. See LICENSE for its copyright notice.
+
+## Optional rune slots
+
+Draw the main effect near the center. Press **Tab** between complete runes to mark the end of a glyph. Draw smaller modifiers around the effect. They are read clockwise from the top, with nearer runes first at the same angle. **G** cycles the guides. Main effects can be traced on the canvas, and modifier guides appear on the right page.
+
+| Slot | Default | Modifier |
+| --- | --- | --- |
+| Form | Affect the selected target | **Pulse** affects up to eight eligible targets within three blocks of the selected target, visible to the caster. |
+| Target | Caster | **Gaze** selects the living entity you're looking at, up to eight blocks away. |
+| Power | Base effect | **Surge** multiplies duration or healing by 1.5 and rounds its Vis multiplier up per recipient. |
+
+**Null** skips one slot and uses its default. Trailing slots can be omitted. For example, draw Lux in the center, Null above it, and Gaze to its right to give another player night vision. For stronger self-healing, draw Sana with Null, Null, Surge in clockwise order.
+
+Lux affects players. Sana can heal living targets. Pulse charges per affected target plus 2 Vis. A malformed spell, missing target, or insufficient Vis leaves the aura unspent. Typed incantations use the effect's defaults.

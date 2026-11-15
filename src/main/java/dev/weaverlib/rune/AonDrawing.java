@@ -4,6 +4,7 @@ import java.util.List;
 
 /** Bounds shared by canvas capture, network decoding, and recognition. */
 public final class AonDrawing {
+    public static final int MAX_GLYPHS = 4;
     public static final int MAX_STROKES = 16;
     public static final int MAX_POINTS = 48;
 
@@ -15,6 +16,28 @@ public final class AonDrawing {
                 throw new IllegalArgumentException("Point outside canvas");
             }
         }
+    }
+
+    // AonDor orders children clockwise from twelve o'clock around their parent's ink bounds.
+    static double clockwiseAngle(Point center, Point point) {
+        double angle = Math.atan2(point.x() - center.x(), center.y() - point.y());
+        return angle < 0 ? angle + Math.TAU : angle;
+    }
+
+    static Point center(List<List<Point>> glyph) {
+        double minX = 1;
+        double minY = 1;
+        double maxX = 0;
+        double maxY = 0;
+        for (var stroke : glyph) {
+            for (var point : stroke) {
+                minX = Math.min(minX, point.x());
+                minY = Math.min(minY, point.y());
+                maxX = Math.max(maxX, point.x());
+                maxY = Math.max(maxY, point.y());
+            }
+        }
+        return new Point((minX + maxX) / 2, (minY + maxY) / 2);
     }
 
     public static List<List<Point>> copyStrokes(List<List<Point>> strokes) {

@@ -10,19 +10,29 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
-public record RuneCast(List<List<Point>> strokes) implements CustomPacketPayload {
+public record RuneCast(List<List<List<Point>>> glyphs) implements CustomPacketPayload {
     public static final Type<RuneCast> TYPE =
         new Type<>(ResourceLocation.fromNamespaceAndPath(WeaverLib.ID, "rune_cast"));
     public static final StreamCodec<ByteBuf, RuneCast> CODEC =
         StreamCodec.of(RuneCast::encode, RuneCast::decode);
 
     public RuneCast {
-        strokes = AonDrawing.copyStrokes(strokes);
+        if (glyphs.isEmpty() || glyphs.size() > AonDrawing.MAX_GLYPHS) {
+            throw new IllegalArgumentException("Invalid rune glyph count");
+        }
+        glyphs = glyphs.stream().map(AonDrawing::copyStrokes).toList();
     }
 
     private static void encode(ByteBuf buffer, RuneCast payload) {
-        buffer.writeByte(payload.strokes.size());
-        for (List<Point> stroke : payload.strokes) {
+        buffer.writeByte(payload.glyphs.size());
+        for (var glyph : payload.glyphs) {
+            writeGlyph(buffer, glyph);
+        }
+    }
+
+    private static void writeGlyph(ByteBuf buffer, List<List<Point>> strokes) {
+        buffer.writeByte(strokes.size());
+        for (List<Point> stroke : strokes) {
             buffer.writeByte(stroke.size());
             for (Point point : stroke) {
                 buffer.writeShort((int) Math.round(point.x() * 65535));
@@ -32,6 +42,18 @@ public record RuneCast(List<List<Point>> strokes) implements CustomPacketPayload
     }
 
     private static RuneCast decode(ByteBuf buffer) {
+        int glyphCount = buffer.readUnsignedByte();
+        if (glyphCount < 1 || glyphCount > AonDrawing.MAX_GLYPHS) {
+            throw new DecoderException("Invalid rune glyph count");
+        }
+        var glyphs = new ArrayList<List<List<Point>>>(glyphCount);
+        for (int index = 0; index < glyphCount; index++) {
+            glyphs.add(readGlyph(buffer));
+        }
+        return new RuneCast(glyphs);
+    }
+
+    private static List<List<Point>> readGlyph(ByteBuf buffer) {
         int strokeCount = buffer.readUnsignedByte();
         if (strokeCount < 1 || strokeCount > AonDrawing.MAX_STROKES) {
             throw new DecoderException("Invalid rune stroke count");
@@ -48,7 +70,7 @@ public record RuneCast(List<List<Point>> strokes) implements CustomPacketPayload
             }
             drawing.add(stroke);
         }
-        return new RuneCast(drawing);
+        return drawing;
     }
 
     @Override
