@@ -47,16 +47,19 @@ final class RuneCanvas extends Screen {
     private final List<Point> activeStroke = new ArrayList<>();
     private final Map<List<Point>, List<Point>> completedPreviews = new IdentityHashMap<>();
     private List<Point> activePreview = List.of();
-    private final InputConstants.Key canvasKey;
-    private final int drawButton;
+    private InputConstants.Key canvasKey;
+    private int drawButton;
     private int guide = -1;
     private final Map<Integer, Map<String, String>> arguments = new HashMap<>();
     private SpellPart editingPart;
     private int editingGlyph;
     private int editingField;
 
-    RuneCanvas(InputConstants.Key canvasKey) {
+    RuneCanvas() {
         super(Component.translatable("weaverlib.canvas"));
+    }
+
+    void setCanvasKey(InputConstants.Key canvasKey) {
         this.canvasKey = canvasKey;
         drawButton = canvasKey.equals(InputConstants.Type.MOUSE.getOrCreate(GLFW.GLFW_MOUSE_BUTTON_LEFT))
             ? GLFW.GLFW_MOUSE_BUTTON_RIGHT : GLFW.GLFW_MOUSE_BUTTON_LEFT;
@@ -67,6 +70,13 @@ final class RuneCanvas extends Screen {
         if (!minecraft.isWindowActive()) {
             onClose();
         }
+    }
+
+    @Override
+    public void removed() {
+        finishStroke();
+        editingPart = null;
+        super.removed();
     }
 
     @Override
@@ -195,6 +205,15 @@ final class RuneCanvas extends Screen {
 
     @Override
     public boolean keyPressed(int key, int scanCode, int modifiers) {
+        if (key == GLFW.GLFW_KEY_ESCAPE) {
+            glyphs.clear();
+            strokes.clear();
+            activeStroke.clear();
+            completedPreviews.clear();
+            arguments.clear();
+            onClose();
+            return true;
+        }
         if (canvasKey.equals(InputConstants.getKey(key, scanCode))) {
             return true;
         }
@@ -350,6 +369,7 @@ final class RuneCanvas extends Screen {
         }
         drawStroke(graphics, activePreview, CAST_INK, x, y, size);
         drawPageText(graphics, title, x + size / 2, y - 13, size);
+        drawPageText(graphics, Component.translatable("weaverlib.canvas_cancel"), x + size / 2, y + size + 6, size);
 
         int guideCenter = bookLeft() + bookWidth() * 74 / 100;
         int textY = y + Math.max(0, (size - 92) / 2);

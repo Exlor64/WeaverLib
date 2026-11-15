@@ -14,7 +14,7 @@
   "weaverlib.canvas_cast": "Release to cast",
   "weaverlib.canvas_guide": "G · Guide",
   "weaverlib.canvas_undo": "Ctrl+Z · Undo",
-  "weaverlib.canvas_cancel": "Esc · Cancel",
+  "weaverlib.canvas_cancel": "Esc · Clear & close",
   "weaverlib.warp_unlocked": "You can now cast magic with runes and words.",
   "weaverlib.warp_manual_lock": "Your rune and word casting is locked.",
   "weaverlib.warp_bad_action": "Use lock or unlock.",
