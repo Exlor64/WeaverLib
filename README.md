@@ -1,4 +1,4 @@
-# WeaverLib 0.1.6
+# WeaverLib 0.1.7
 
 An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and Java 21. By Ex.
 
@@ -13,7 +13,7 @@ Run `gradlew.bat build` on Windows or `./gradlew build` on Linux/macOS with a Ja
 | `incant lux` | 60 seconds of night vision | 5 Vis |
 | `incant sana` | Heals 2 hearts | 8 Vis |
 
-Type incantations in regular chat with no slash. If the first word is `incant` (case-insensitive), only players within 10 blocks in the same dimension receive the message, even if the spell fails. Both spells are available to all living, non-spectator players.
+Type incantations in regular chat with no slash. If the first word is `incant` (case-insensitive), only players within 10 blocks in the same dimension receive the message, even if the spell fails. Casting is available to living, non-spectator players who have earned the Warp unlock.
 
 Hold **K** to open the parchment canvas and **G** to cycle the optional rune guides. The numbers mark the start of each stroke.
 
@@ -25,6 +25,14 @@ Drag with the left mouse button, or the right mouse button if you bind the canva
 The server recognizes the submitted ink and runs the same spell logic for both inputs. Vis comes from Thaumaturge's aura in the caster's current chunk. Insufficient Vis, unknown inputs, full-health healing and redundant night vision leave the aura unspent. There is a shared one-second interval between attempts, and native spells also use Thaumaturge’s computed cooldown. Lux and Sana each accept up to three optional modifiers.
 
 The geometry matcher is adapted from the MIT-licensed AonDor port kit. See LICENSE for its copyright notice.
+
+## Unlocking rune and word casting
+
+Reach **50 combined Normal and Permanent Warp** to unlock both casting methods. Temporary Warp and bonuses from equipment do not count. The unlock is saved to the player and survives death, reconnecting, and purification. A locked casting attempt displays your current progress without spending Vis.
+
+The server config entry `requiredWarp` in `weaverlib-server.toml` controls the threshold. Set it to `0` to disable the Warp requirement. Changing the threshold affects players who have yet to earn the unlock.
+
+Operators can type `/weaverwarp unlock` or `/weaverwarp lock` for themselves. Add an online player name to target someone else. Both arguments must be typed manually. A manual lock takes precedence over the threshold and lasts until an operator unlocks that player.
 
 ## Lux and Sana rune slots
 

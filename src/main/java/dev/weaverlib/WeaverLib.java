@@ -34,6 +34,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -49,7 +50,8 @@ public final class WeaverLib {
     private static final int INCANT_CHAT_RANGE_SQUARED = 100;
     private static final Map<UUID, Integer> NEXT_ATTEMPT = new HashMap<>();
 
-    public WeaverLib(IEventBus modBus) {
+    public WeaverLib(IEventBus modBus, ModContainer container) {
+        WarpUnlock.register(modBus, container);
         modBus.addListener(this::registerPayloads);
         NeoForge.EVENT_BUS.addListener(this::onLogout);
     }
@@ -127,7 +129,7 @@ public final class WeaverLib {
             return false;
         }
         NEXT_ATTEMPT.put(player.getUUID(), now + 20);
-        return true;
+        return WarpUnlock.check(player, true);
     }
 
     private static void castFocus(ServerPlayer player, Spell spell) {
