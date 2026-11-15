@@ -284,10 +284,12 @@ public final class AonRecognition {
                 for (Prepared candidate : candidates) {
                     double score = orderedError(points, candidate.normalized(), tolerance);
                     if (score < first) {
-                        second = first;
+                        if (best == null || !best.id().equals(candidate.template().id())) {
+                            second = first;
+                        }
                         first = score;
                         best = candidate.template();
-                    } else {
+                    } else if (best != null && !best.id().equals(candidate.template().id())) {
                         second = Math.min(second, score);
                     }
                 }

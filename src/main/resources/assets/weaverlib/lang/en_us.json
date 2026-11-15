@@ -23,6 +23,8 @@
   "weaverlib.warp_command_locked": "Rune and word casting locked for %s.",
   "weaverlib.warp_locked": "Rune and word casting is locked. Normal + Permanent Warp: %s/%s.",
   "weaverlib.unknown_words": "The incantation fades.",
+  "weaverlib.rune_recognized": "Rune %s · %s",
+  "weaverlib.rune_unrecognized": "Rune %s · Unrecognized",
   "weaverlib.unknown_rune": "The lines fail to bind.",
   "weaverlib.no_effect": "The spell has no effect here.",
   "weaverlib.insufficient_vis": "The local aura lacks %s Vis.",

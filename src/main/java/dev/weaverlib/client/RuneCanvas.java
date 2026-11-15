@@ -47,6 +47,7 @@ final class RuneCanvas extends Screen {
     private final List<Point> activeStroke = new ArrayList<>();
     private final Map<List<Point>, List<Point>> completedPreviews = new IdentityHashMap<>();
     private List<Point> activePreview = List.of();
+    private Component runeStatus;
     private InputConstants.Key canvasKey;
     private int drawButton;
     private int guide = -1;
@@ -151,6 +152,7 @@ final class RuneCanvas extends Screen {
     private void finishStroke() {
         if (activeStroke.size() >= 2) {
             strokes.add(List.copyOf(activeStroke));
+            updateRuneStatus();
         }
         activeStroke.clear();
         activePreview = List.of();
@@ -211,6 +213,7 @@ final class RuneCanvas extends Screen {
             activeStroke.clear();
             completedPreviews.clear();
             arguments.clear();
+            runeStatus = null;
             onClose();
             return true;
         }
@@ -243,6 +246,7 @@ final class RuneCanvas extends Screen {
                 completedPreviews.remove(strokes.removeLast());
                 arguments.remove(glyphs.size());
                 editingPart = null;
+                updateRuneStatus();
             }
             return true;
         }
@@ -260,6 +264,34 @@ final class RuneCanvas extends Screen {
             return true;
         }
         return super.keyPressed(key, scanCode, modifiers);
+    }
+
+    private void updateRuneStatus() {
+        if (strokes.isEmpty() && glyphs.isEmpty()) {
+            runeStatus = null;
+            return;
+        }
+        var latest = strokes.isEmpty() ? glyphs.getLast() : strokes;
+        var ink = recognitionInk(latest);
+        int number = glyphs.size() + (strokes.isEmpty() ? 0 : 1);
+        FocusComponent component = FocusComponent.recognize(ink);
+        String name = component == null ? null : component.word();
+        if (name == null) {
+            if (number == 1) {
+                var effect = Weave.recognize(ink);
+                if (effect.template() != null) {
+                    name = effect.template().id();
+                }
+            } else {
+                RuneModifier modifier = RuneModifier.recognize(ink);
+                if (modifier != null) {
+                    name = modifier.template().id();
+                }
+            }
+        }
+        runeStatus = name == null
+            ? Component.translatable("weaverlib.rune_unrecognized", number)
+            : Component.translatable("weaverlib.rune_recognized", number, name);
     }
 
     private void openArguments() {
@@ -368,7 +400,7 @@ final class RuneCanvas extends Screen {
             activePreview = StrokeInk.preview(activeStroke);
         }
         drawStroke(graphics, activePreview, CAST_INK, x, y, size);
-        drawPageText(graphics, title, x + size / 2, y - 13, size);
+        drawPageText(graphics, runeStatus == null ? title : runeStatus, x + size / 2, y - 13, size);
         drawPageText(graphics, Component.translatable("weaverlib.canvas_cancel"), x + size / 2, y + size + 6, size);
 
         int guideCenter = bookLeft() + bookWidth() * 74 / 100;

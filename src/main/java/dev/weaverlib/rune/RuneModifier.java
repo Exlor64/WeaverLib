@@ -50,7 +50,7 @@ public enum RuneModifier {
         return this == NULL || slot == expected;
     }
 
-    static RuneModifier recognize(List<List<Point>> strokes) {
+    public static RuneModifier recognize(List<List<Point>> strokes) {
         var match = AonRecognition.assess(strokes, TEMPLATES,
             AonRecognition.Tolerance.defaults(.13, .025), .075, .028);
         if (match.template() == null) {

@@ -78,7 +78,7 @@ public record FocusComponent(String word, SpellPartKind kind, ResourceKey<SpellP
     public static final List<AonRecognition.Template> TEMPLATES = COMPONENTS.values().stream()
         .map(FocusComponent::template).toList();
     private static final AonRecognition.OrderedMatcher MATCHER =
-        new AonRecognition.OrderedMatcher(TEMPLATES, AonRecognition.Tolerance.defaults(.065, .013));
+        new AonRecognition.OrderedMatcher(recognitionTemplates(), AonRecognition.Tolerance.defaults(.065, .013));
 
     public static FocusComponent named(String name) {
         return COMPONENTS.get(name.toLowerCase(Locale.ROOT).replace('-', '_'));
@@ -87,6 +87,34 @@ public record FocusComponent(String word, SpellPartKind kind, ResourceKey<SpellP
     public static FocusComponent recognize(List<List<Point>> strokes) {
         var match = MATCHER.recognize(strokes);
         return match.template() == null ? null : named(match.template().id());
+    }
+
+    private static List<AonRecognition.Template> recognitionTemplates() {
+        var templates = new ArrayList<>(TEMPLATES);
+        var canonical = named("amplify").template().strokes();
+        addAmplifyVariants(templates, canonical.getFirst(), canonical.getLast());
+        addAmplifyVariants(templates, stroke("50,84 50,19"), stroke("25,48 50,19 75,49"));
+        addAmplifyVariants(templates, stroke("50,84 50,19"), stroke("32,40 50,19 68,40"));
+        return templates;
+    }
+
+    private static void addAmplifyVariants(List<AonRecognition.Template> templates,
+            List<Point> stem, List<Point> head) {
+        Point base = stem.getFirst();
+        Point tip = head.get(1);
+        Point left = head.getFirst();
+        Point right = head.getLast();
+        for (var shaft : List.of(stem, stem.reversed())) {
+            for (var arrowhead : List.of(head, head.reversed())) {
+                templates.add(new AonRecognition.Template("amplify", List.of(shaft, arrowhead)));
+                templates.add(new AonRecognition.Template("amplify", List.of(arrowhead, shaft)));
+            }
+            templates.add(new AonRecognition.Template("amplify",
+                List.of(shaft, List.of(tip, left), List.of(tip, right))));
+            templates.add(new AonRecognition.Template("amplify",
+                List.of(shaft, List.of(left, tip), List.of(tip, right))));
+        }
+        templates.add(new AonRecognition.Template("amplify", List.of(List.of(base, tip, left, tip, right))));
     }
 
     private static void add(SpellPartKind kind, String word, String... paths) {
