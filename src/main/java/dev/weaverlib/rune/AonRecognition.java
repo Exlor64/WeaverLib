@@ -199,6 +199,10 @@ public final class AonRecognition {
         var a = normalized(strokes, tolerance.minimumExtent());
         var b = normalized(template.strokes(), .000001);
         if (a.isEmpty() || b.isEmpty()) return Double.POSITIVE_INFINITY;
+        return orderedError(a, b, tolerance);
+    }
+
+    private static double orderedError(List<List<Point>> a, List<List<Point>> b, Tolerance tolerance) {
         double path = 0,
                 endpoints = 0,
                 corners = 0,
@@ -247,6 +251,53 @@ public final class AonRecognition {
         if (best == null || first > tolerance.maximumError()) return new Match(null, first, false);
         boolean ambiguous = second - first < tolerance.ambiguityGap();
         return new Match(ambiguous ? null : best, first, ambiguous);
+    }
+
+    /** Reuses normalized templates and considers only the recorded number of strokes. */
+    public static final class OrderedMatcher {
+        private record Prepared(Template template, List<List<Point>> normalized) {}
+
+        private final Map<Integer, List<Prepared>> templatesByStrokeCount;
+        private final Tolerance tolerance;
+
+        public OrderedMatcher(List<Template> templates, Tolerance tolerance) {
+            this.tolerance = tolerance;
+            Map<Integer, List<Prepared>> groups = new HashMap<>();
+            for (Template template : templates) {
+                var points = normalized(template.strokes(), .000001);
+                if (!points.isEmpty()) {
+                    groups.computeIfAbsent(points.size(), ignored -> new ArrayList<>())
+                        .add(new Prepared(template, points));
+                }
+            }
+            groups.replaceAll((count, group) -> List.copyOf(group));
+            templatesByStrokeCount = Map.copyOf(groups);
+        }
+
+        public Match recognize(List<List<Point>> strokes) {
+            var candidates = templatesByStrokeCount.getOrDefault(strokes.size(), List.of());
+            var points = normalized(strokes, tolerance.minimumExtent());
+            Template best = null;
+            double first = Double.POSITIVE_INFINITY;
+            double second = Double.POSITIVE_INFINITY;
+            if (!points.isEmpty()) {
+                for (Prepared candidate : candidates) {
+                    double score = orderedError(points, candidate.normalized(), tolerance);
+                    if (score < first) {
+                        second = first;
+                        first = score;
+                        best = candidate.template();
+                    } else {
+                        second = Math.min(second, score);
+                    }
+                }
+            }
+            if (best == null || first > tolerance.maximumError()) {
+                return new Match(null, first, false);
+            }
+            boolean ambiguous = second - first < tolerance.ambiguityGap();
+            return new Match(ambiguous ? null : best, first, ambiguous);
+        }
     }
 
     private AonRecognition() {}

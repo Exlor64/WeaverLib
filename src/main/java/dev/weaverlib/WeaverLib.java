@@ -88,7 +88,7 @@ public final class WeaverLib {
     }
 
     private void registerPayloads(RegisterPayloadHandlersEvent event) {
-        event.registrar("3").playToServer(RuneCast.TYPE, RuneCast.CODEC, (payload, context) -> {
+        event.registrar("4").playToServer(RuneCast.TYPE, RuneCast.CODEC, (payload, context) -> {
             if (context.player() instanceof ServerPlayer player && beginAttempt(player)) {
                 if (FocusComponent.recognize(payload.glyphs().getFirst()) != null) {
                     Spell focus;

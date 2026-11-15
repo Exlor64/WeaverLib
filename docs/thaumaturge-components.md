@@ -20,37 +20,9 @@ This reference covers the player-facing spell parts in Thaumaturge 1.1.0. Weaver
 | `incant fire frost branch bolt` | Use one Bolt delivery to feed Fire and Frost. |
 | `incant heal sieve[keep=allies] aura` | Use Aura, then keep allies before applying Heal. |
 
-## Drawing key
+## Drawing the glyphs
 
-Each focus glyph takes two strokes. Draw the family frame first. Then draw the eight teeth from left to right, returning to the middle line between teeth. A tooth points above or below the middle line according to the sequence in the table. The in-game guide shows the exact start point and spacing.
-
-| Family | Frame stroke |
-| --- | --- |
-| Effect | Bottom left → top left → top right → bottom right. |
-| Harvest | Top left → top right → bottom right → bottom left → top left. |
-| Delivery | Top left → bottom left → bottom right → top right. |
-| Modifier | Bottom left → top left → bottom right → top right. |
-| Flow | Left → top → right → bottom → left. |
-
-| Effect | Teeth | Delivery | Teeth | Modifier | Teeth | Flow | Teeth |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `fire` | ↑ ↑ ↑ ↑ ↑ ↑ ↑ ↑ | `touch` | ↑ ↑ ↑ ↑ ↑ ↑ ↑ ↑ | `amplify` | ↑ ↑ ↑ ↑ ↑ ↑ ↑ ↑ | `branch` | ↑ ↑ ↑ ↑ ↑ ↑ ↑ ↑ |
-| `frost` | ↓ ↑ ↑ ↑ ↓ ↓ ↓ ↑ | `bolt` | ↓ ↑ ↑ ↑ ↓ ↓ ↓ ↑ | `extend` | ↓ ↑ ↑ ↑ ↓ ↓ ↓ ↑ | `relay` | ↓ ↑ ↑ ↑ ↓ ↓ ↓ ↑ |
-| `air` | ↑ ↓ ↑ ↑ ↓ ↓ ↑ ↓ | `beam` | ↑ ↓ ↑ ↑ ↓ ↓ ↑ ↓ | `widen` | ↑ ↓ ↑ ↑ ↓ ↓ ↑ ↓ | `delay` | ↑ ↓ ↑ ↑ ↓ ↓ ↑ ↓ |
-| `earth` | ↓ ↓ ↑ ↑ ↑ ↑ ↓ ↓ | `projectile` | ↓ ↓ ↑ ↑ ↑ ↑ ↓ ↓ | `quicken` | ↓ ↓ ↑ ↑ ↑ ↑ ↓ ↓ | `sieve` | ↓ ↓ ↑ ↑ ↑ ↑ ↓ ↓ |
-| `flux` | ↑ ↑ ↓ ↑ ↓ ↑ ↓ ↓ | `lob` | ↑ ↑ ↓ ↑ ↓ ↑ ↓ ↓ | `efficient` | ↑ ↑ ↓ ↑ ↓ ↑ ↓ ↓ |  |  |
-| `curse` | ↓ ↑ ↓ ↑ ↑ ↓ ↑ ↓ | `spray` | ↓ ↑ ↓ ↑ ↑ ↓ ↑ ↓ | `pierce` | ↓ ↑ ↓ ↑ ↑ ↓ ↑ ↓ |  |  |
-| `heal` | ↑ ↓ ↓ ↑ ↑ ↓ ↓ ↑ | `chain` | ↑ ↓ ↓ ↑ ↑ ↓ ↓ ↑ | `homing` | ↑ ↓ ↓ ↑ ↑ ↓ ↓ ↑ |  |  |
-| `burst` | ↓ ↓ ↓ ↑ ↓ ↑ ↑ ↑ | `aura` | ↓ ↓ ↓ ↑ ↓ ↑ ↑ ↑ | `bounce` | ↓ ↓ ↓ ↑ ↓ ↑ ↑ ↑ |  |  |
-| `imbue` | ↑ ↑ ↑ ↓ ↑ ↓ ↓ ↓ | `self` | ↑ ↑ ↑ ↓ ↑ ↓ ↓ ↓ | `silk_touch` | ↑ ↑ ↑ ↓ ↑ ↓ ↓ ↓ |  |  |
-| `break` | ↓ ↑ ↑ ↓ ↓ ↑ ↑ ↓ | `cloud` | ↓ ↑ ↑ ↓ ↓ ↑ ↑ ↓ | `fortune` | ↓ ↑ ↑ ↓ ↓ ↑ ↑ ↓ |  |  |
-| `exchange` | ↑ ↓ ↑ ↓ ↓ ↑ ↓ ↑ | `mine` | ↑ ↓ ↑ ↓ ↓ ↑ ↓ ↑ | `scatter` | ↑ ↓ ↑ ↓ ↓ ↑ ↓ ↑ |  |  |
-| `rift` | ↓ ↓ ↑ ↓ ↑ ↓ ↑ ↑ | `wall` | ↓ ↓ ↑ ↓ ↑ ↓ ↑ ↑ | `fan` | ↓ ↓ ↑ ↓ ↑ ↓ ↑ ↑ |  |  |
-| `ward` | ↑ ↑ ↓ ↓ ↓ ↓ ↑ ↑ | `spellbat` | ↑ ↑ ↓ ↓ ↓ ↓ ↑ ↑ | `echo` | ↑ ↑ ↓ ↓ ↓ ↓ ↑ ↑ |  |  |
-| `primal` | ↓ ↑ ↓ ↓ ↑ ↑ ↓ ↑ | `sprite` | ↓ ↑ ↓ ↓ ↑ ↑ ↓ ↑ |  |  |  |  |
-| `hellbat` | ↑ ↓ ↓ ↓ ↑ ↑ ↑ ↓ | `plan` | ↑ ↓ ↓ ↓ ↑ ↑ ↑ ↓ |  |  |  |  |
-| `blink` | ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ |  |  |  |  |  |  |
-| `harvest` | ↑ ↑ ↑ ↑ ↑ ↑ ↑ ↑ |  |  |  |  |  |  |
+Choose a glyph with **G** or **Shift+G** to see its exact shape and numbered starts. Draw each stroke continuously from its numbered start, then lift before the next stroke. The recognizer uses stroke count, order, direction, and relative placement. It accepts changes in overall size and canvas position. Start by practicing broad, simple shapes such as Heal. Curves are part of the templates for glyphs such as Fire, Air, and Cloud.
 
 ## Native arguments
 
