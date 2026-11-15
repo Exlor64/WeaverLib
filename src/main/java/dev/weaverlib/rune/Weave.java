@@ -11,9 +11,12 @@ public enum Weave {
         List.of(new Point(.28, .42), new Point(.72, .42))
     )),
     SANA(8, List.of(
-        List.of(new Point(.2, .5), new Point(.5, .2), new Point(.8, .5),
-                new Point(.5, .8), new Point(.2, .5)),
-        List.of(new Point(.5, .35), new Point(.5, .65))
+        List.of(new Point(.23, .85), new Point(.47, .64), new Point(.43, .41),
+                new Point(.59, .23), new Point(.82, .29)),
+        List.of(new Point(.45, .50), new Point(.65, .51), new Point(.76, .68)),
+        List.of(new Point(.26, .26), new Point(.31, .28), new Point(.34, .34),
+                new Point(.31, .40), new Point(.26, .42), new Point(.21, .40),
+                new Point(.18, .34), new Point(.21, .28), new Point(.26, .26))
     ));
 
     private static final List<AonRecognition.Template> TEMPLATES =

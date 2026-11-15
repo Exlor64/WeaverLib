@@ -11,10 +11,19 @@ import java.util.List;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.lwjgl.glfw.GLFW;
 
 final class RuneCanvas extends Screen {
+    // Thaumaturge's book spread occupies the top 360 rows of its 512px atlas.
+    private static final ResourceLocation BOOK =
+        ResourceLocation.fromNamespaceAndPath("thaumaturge", "textures/gui/gui_researchbook.png");
+    private static final int ATLAS_SIZE = 512;
+    private static final int SPREAD_HEIGHT = 360;
+    private static final int PAGE_TEXT = 0xFF492C21;
+    private static final int GUIDE_INK = 0xFFAA8469;
+    private static final int CAST_INK = 0xFFA01FDB;
     private final List<List<Point>> strokes = new ArrayList<>();
     private final List<Point> activeStroke = new ArrayList<>();
     private final InputConstants.Key canvasKey;
@@ -40,16 +49,32 @@ final class RuneCanvas extends Screen {
         return false;
     }
 
+    private int bookWidth() {
+        return Math.max(1, Math.min(640, Math.min(width - 12, (height - 12) * ATLAS_SIZE / SPREAD_HEIGHT)));
+    }
+
+    private int bookHeight() {
+        return bookWidth() * SPREAD_HEIGHT / ATLAS_SIZE;
+    }
+
+    private int bookLeft() {
+        return (width - bookWidth()) / 2;
+    }
+
+    private int bookTop() {
+        return (height - bookHeight()) / 2;
+    }
+
     private int size() {
-        return Math.min(270, Math.max(1, Math.min(width - 24, height - 54)));
+        return Math.max(1, bookWidth() * 41 / 100);
     }
 
     private int left() {
-        return (width - size()) / 2;
+        return bookLeft() + bookWidth() * 26 / 100 - size() / 2;
     }
 
     private int top() {
-        return (height - size()) / 2;
+        return bookTop() + bookHeight() * 55 / 100 - size() / 2;
     }
 
     @Override
@@ -151,35 +176,52 @@ final class RuneCanvas extends Screen {
         int x = left();
         int y = top();
         int size = size();
-        graphics.fill(0, 0, width, height, 0xAA11151B);
-        graphics.fill(x, y, x + size, y + size, 0xFF151E2B);
+        graphics.fill(0, 0, width, height, 0xA018111D);
+        graphics.blit(BOOK, bookLeft(), bookTop(), bookWidth(), bookHeight(), 0, 0,
+            ATLAS_SIZE, SPREAD_HEIGHT, ATLAS_SIZE, ATLAS_SIZE);
+
         for (int index = 0; index <= 10; index++) {
             int offset = index * size / 10;
-            graphics.hLine(x, x + size, y + offset, 0xFF2E4254);
-            graphics.vLine(x + offset, y, y + size, 0xFF2E4254);
+            int rule = index == 0 || index == 10 ? 0xA06F4934 : 0x446F4934;
+            graphics.hLine(x, x + size, y + offset, rule);
+            graphics.vLine(x + offset, y, y + size, rule);
         }
 
-        Component heading = title;
         if (guide >= 0) {
-            Weave spell = Weave.values()[guide];
-            heading = Component.literal(spell.word());
-            var template = spell.template().strokes();
+            var template = Weave.values()[guide].template().strokes();
             for (int index = 0; index < template.size(); index++) {
                 List<Point> stroke = template.get(index);
-                drawStroke(graphics, stroke, 0xFF698DA6);
+                drawStroke(graphics, stroke, GUIDE_INK);
                 Point start = stroke.getFirst();
                 graphics.drawString(font, Integer.toString(index + 1),
-                    x + (int) (start.x() * size) + 4, y + (int) (start.y() * size), 0xFFC5D6E3);
+                    x + (int) (start.x() * size) - 7, y + (int) (start.y() * size) - 9,
+                    PAGE_TEXT, false);
             }
         }
 
         for (List<Point> stroke : strokes) {
-            drawStroke(graphics, stroke, 0xFFE0F6FF);
+            drawStroke(graphics, stroke, CAST_INK);
         }
-        drawStroke(graphics, activeStroke, 0xFFE0F6FF);
-        graphics.drawCenteredString(font, heading, width / 2, y - 13, 0xFFF2F7FA);
-        graphics.drawCenteredString(font, Component.translatable("weaverlib.canvas_controls"),
-            width / 2, y + size + 7, 0xFFE3EAF2);
+        drawStroke(graphics, activeStroke, CAST_INK);
+        drawPageText(graphics, title, x + size / 2, y - 13, size);
+
+        int guideCenter = bookLeft() + bookWidth() * 74 / 100;
+        int textY = y + Math.max(0, (size - 66) / 2);
+        Component guideTitle = guide < 0
+            ? Component.translatable("weaverlib.guide_off")
+            : Component.translatable("weaverlib.guide_active", Weave.values()[guide].word());
+        drawPageText(graphics, guideTitle, guideCenter, textY, size);
+        graphics.hLine(guideCenter - size / 3, guideCenter + size / 3, textY + 12, 0x806F4934);
+        drawPageText(graphics, Component.translatable("weaverlib.canvas_cast"), guideCenter, textY + 18, size);
+        drawPageText(graphics, Component.translatable("weaverlib.canvas_guide"), guideCenter, textY + 30, size);
+        drawPageText(graphics, Component.translatable("weaverlib.canvas_undo"), guideCenter, textY + 42, size);
+        drawPageText(graphics, Component.translatable("weaverlib.canvas_cancel"), guideCenter, textY + 54, size);
+    }
+
+    private void drawPageText(GuiGraphics graphics, Component text, int center, int y, int maxWidth) {
+        var clipped = font.substrByWidth(text, maxWidth);
+        var line = net.minecraft.locale.Language.getInstance().getVisualOrder(clipped);
+        graphics.drawString(font, line, center - font.width(line) / 2, y, PAGE_TEXT, false);
     }
 
     private void drawStroke(GuiGraphics graphics, List<Point> stroke, int color) {
