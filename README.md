@@ -1,4 +1,4 @@
-# WeaverLib 0.1.0
+# WeaverLib 0.1.1
 
 An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and Java 21. By Ex.
 
@@ -15,12 +15,12 @@ Run `gradlew.bat build` on Windows or `./gradlew build` on Linux/macOS with a Ja
 
 Word casting takes a typed incantation. Both spells are available to all living, non-spectator players.
 
-Press **K** to open the canvas and **G** to cycle the optional rune guides. The numbers mark the start of each stroke.
+Hold **K** to open the canvas and **G** to cycle the optional rune guides. The numbers mark the start of each stroke.
 
 - **Lux** uses a V drawn from upper left, down, then up to the right. Draw the crossbar left to right.
 - **Sana** uses a diamond drawn from the left point through the top, right and bottom, back to the left point. Draw the interior line top to bottom.
 
-Drag with the left mouse button. Use **Ctrl+Z** to undo a stroke, **Enter** to cast, and **Esc** to close. Ordered matches have full potency. Recognizable shapes drawn out of order can cast at half potency for the same Vis cost.
+Drag with the left mouse button, or the right mouse button if you bind the canvas to left click. Use **Ctrl+Z** to undo a stroke. Release the canvas key to cast, or press **Esc** to cancel. Ordered matches have full potency. Recognizable shapes drawn out of order can cast at half potency for the same Vis cost.
 
 The server recognizes the submitted ink and runs the same spell logic for both inputs. Vis comes from Thaumaturge's aura in the caster's current chunk. Insufficient Vis, unknown inputs, full-health healing and redundant night vision leave the aura unspent. There is a shared one-second interval between attempts. The first release handles one rune at a time.
 

@@ -1,8 +1,8 @@
 {
   "key.categories.weaverlib": "WeaverLib",
-  "key.weaverlib.canvas": "Open Canvas",
+  "key.weaverlib.canvas": "Hold Canvas",
   "weaverlib.canvas": "Canvas",
-  "weaverlib.canvas_controls": "Enter Cast   Ctrl+Z Undo   G Guide   Esc Close",
+  "weaverlib.canvas_controls": "Release to cast   Ctrl+Z Undo   G Guide   Esc Cancel",
   "weaverlib.unknown_words": "The incantation fades.",
   "weaverlib.unknown_rune": "The lines fail to bind.",
   "weaverlib.no_effect": "The spell has no effect here.",

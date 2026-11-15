@@ -1,5 +1,6 @@
 package dev.weaverlib.client;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.math.Axis;
 import dev.weaverlib.RuneCast;
 import dev.weaverlib.rune.AonDrawing;
@@ -16,10 +17,22 @@ import org.lwjgl.glfw.GLFW;
 final class RuneCanvas extends Screen {
     private final List<List<Point>> strokes = new ArrayList<>();
     private final List<Point> activeStroke = new ArrayList<>();
+    private final InputConstants.Key canvasKey;
+    private final int drawButton;
     private int guide = -1;
 
-    RuneCanvas() {
+    RuneCanvas(InputConstants.Key canvasKey) {
         super(Component.translatable("weaverlib.canvas"));
+        this.canvasKey = canvasKey;
+        drawButton = canvasKey.equals(InputConstants.Type.MOUSE.getOrCreate(GLFW.GLFW_MOUSE_BUTTON_LEFT))
+            ? GLFW.GLFW_MOUSE_BUTTON_RIGHT : GLFW.GLFW_MOUSE_BUTTON_LEFT;
+    }
+
+    @Override
+    public void tick() {
+        if (!minecraft.isWindowActive()) {
+            onClose();
+        }
     }
 
     @Override
@@ -41,7 +54,7 @@ final class RuneCanvas extends Screen {
 
     @Override
     public boolean mouseClicked(double x, double y, int button) {
-        if (button == 0 && strokes.size() < AonDrawing.MAX_STROKES
+        if (button == drawButton && strokes.size() < AonDrawing.MAX_STROKES
                 && x >= left() && x <= left() + size() && y >= top() && y <= top() + size()) {
             activeStroke.clear();
             activeStroke.add(point(x, y));
@@ -52,7 +65,7 @@ final class RuneCanvas extends Screen {
 
     @Override
     public boolean mouseDragged(double x, double y, int button, double deltaX, double deltaY) {
-        if (button == 0 && !activeStroke.isEmpty()) {
+        if (button == drawButton && !activeStroke.isEmpty()) {
             appendPoint(x, y);
             return true;
         }
@@ -61,15 +74,41 @@ final class RuneCanvas extends Screen {
 
     @Override
     public boolean mouseReleased(double x, double y, int button) {
-        if (button == 0 && !activeStroke.isEmpty()) {
+        if (canvasKey.equals(InputConstants.Type.MOUSE.getOrCreate(button))) {
+            castAndClose();
+            return true;
+        }
+        if (button == drawButton && !activeStroke.isEmpty()) {
             appendPoint(x, y);
-            if (activeStroke.size() >= 2) {
-                strokes.add(List.copyOf(activeStroke));
-            }
-            activeStroke.clear();
+            finishStroke();
             return true;
         }
         return super.mouseReleased(x, y, button);
+    }
+
+    private void finishStroke() {
+        if (activeStroke.size() >= 2) {
+            strokes.add(List.copyOf(activeStroke));
+        }
+        activeStroke.clear();
+    }
+
+    private void castAndClose() {
+        finishStroke();
+        if (minecraft.isWindowActive() && minecraft.player != null
+                && minecraft.getConnection() != null && !strokes.isEmpty()) {
+            PacketDistributor.sendToServer(new RuneCast(strokes));
+        }
+        onClose();
+    }
+
+    @Override
+    public boolean keyReleased(int key, int scanCode, int modifiers) {
+        if (canvasKey.equals(InputConstants.getKey(key, scanCode))) {
+            castAndClose();
+            return true;
+        }
+        return super.keyReleased(key, scanCode, modifiers);
     }
 
     private void appendPoint(double x, double y) {
@@ -93,9 +132,7 @@ final class RuneCanvas extends Screen {
 
     @Override
     public boolean keyPressed(int key, int scanCode, int modifiers) {
-        if (key == GLFW.GLFW_KEY_ENTER && !strokes.isEmpty() && activeStroke.isEmpty()) {
-            PacketDistributor.sendToServer(new RuneCast(strokes));
-            onClose();
+        if (canvasKey.equals(InputConstants.getKey(key, scanCode))) {
             return true;
         }
         if (key == GLFW.GLFW_KEY_Z && hasControlDown() && activeStroke.isEmpty() && !strokes.isEmpty()) {

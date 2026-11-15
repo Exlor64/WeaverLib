@@ -30,8 +30,9 @@ public final class WeaverClient {
     private void tick(ClientTickEvent.Post event) {
         Minecraft client = Minecraft.getInstance();
         while (scribing.consumeClick()) {
-            if (client.player != null && client.level != null && client.screen == null) {
-                client.setScreen(new RuneCanvas());
+            if (scribing.isDown() && client.isWindowActive() && client.player != null
+                    && client.level != null && client.screen == null) {
+                client.setScreen(new RuneCanvas(scribing.getKey()));
             }
         }
     }
