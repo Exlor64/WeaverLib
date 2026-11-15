@@ -82,7 +82,7 @@ public record FocusComponent(String word, String incantation, SpellPartKind kind
             "14,78 35,42:57,29 74,17:83,26", "63,16 83,26 70,48");
         addPart(WeaverLib.ID, SpellPartKind.MODIFIER, "eternal", "aeternum",
             "49,49 24,16:14,42 3,72:29,76 51,71:72,40 92,16:91,47 92,78:70,75 60,69 49,49");
-        addPart(WeaverLib.ID, SpellPartKind.EFFECT, "inscribe", "inscribe",
+        addPart(WeaverLib.ID, SpellPartKind.EFFECT, "inscribe", "insculpe",
             "22,77 48,28 76,16 72,44 22,77", "49,57 78,57", "42,72 78,72");
         addPart(WeaverLib.ID, SpellPartKind.EFFECT, "halt", "siste",
             "28,16 28,82", "64,16 64,82");

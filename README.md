@@ -1,4 +1,4 @@
-# WeaverLib 0.1.17
+# WeaverLib 0.1.18
 
 An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and Java 21. By Ex.
 
@@ -54,7 +54,7 @@ Native effects, deliveries, modifiers, and flows have Latin-inspired chat words 
 
 ## Inscribed items
 
-Hold a single item in your main hand. Draw **Inscribe** first, press **Tab**, then draw the spell normally. Put the spell's main rune near the center and its other runes clockwise around it. Inscribe's position is ignored when ordering the stored spell. Select **Inscribe** in the canvas guide with **G** to see the three strokes. You can also say `incant inscribe cura auge fulgor` to bind Heal + Amplify + Beam.
+Hold a single item in your main hand. Draw **Inscribe** first, press **Tab**, then draw the spell normally. Put the spell's main rune near the center and its other runes clockwise around it. Inscribe's position is ignored when ordering the stored spell. Select **Inscribe** in the canvas guide with **G** to see the three strokes. You can also say `incant insculpe cura auge fulgor` to bind Heal + Amplify + Beam. The earlier word `inscribe` still works.
 
 Inscribe requires the Warp unlock and costs **150 Vis** from the local aura. It binds the spell without casting it. An item can hold one inscription. Its tooltip shows the stored incantation or rune names, the battery charge, and the casting multiplier.
 

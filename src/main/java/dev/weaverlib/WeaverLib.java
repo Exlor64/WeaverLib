@@ -86,7 +86,7 @@ public final class WeaverLib {
         if (beginAttempt(caster, true)) {
             if (words.length == 2) {
                 String[] phrase = words[1].strip().split("(?U)\\s+", 2);
-                if (phrase[0].equalsIgnoreCase("inscribe")) {
+                if (FocusComponent.spoken(phrase[0]) == FocusComponent.named("inscribe")) {
                     inscribeWords(caster, phrase.length == 2 ? phrase[1] : "");
                     return true;
                 }
