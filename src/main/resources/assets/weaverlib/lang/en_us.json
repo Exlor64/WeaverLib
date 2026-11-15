@@ -25,6 +25,7 @@
   "weaverlib.warp_revelation_change": "The warp changes you in ways you can't comprehend...",
   "weaverlib.warp_revelation_pull": "You feel the pull to create... to combine... to %s.",
   "weaverlib.warp_revelation_weave": "weave",
+  "weaverlib.warp_condensed": "Your Temporary Warp condenses into 1 Normal Warp.",
   "weaverlib.warp_unlocked": "You can now cast magic with runes and words.",
   "weaverlib.warp_manual_lock": "Your rune and word casting is locked.",
   "weaverlib.warp_bad_action": "Use lock or unlock.",

@@ -2,8 +2,6 @@ package dev.weaverlib;
 
 import com.leclowndu93150.thaumaturge.api.aura.AuraHelper;
 import com.leclowndu93150.thaumaturge.api.transaction.Transaction;
-import com.leclowndu93150.thaumaturge.api.warp.WarpHelper;
-import com.leclowndu93150.thaumaturge.api.warp.WarpType;
 import com.leclowndu93150.thaumaturge.api.casters.FocusCaster;
 import com.leclowndu93150.thaumaturge.api.spell.FocusTier;
 import com.leclowndu93150.thaumaturge.api.spell.Spell;
@@ -281,6 +279,7 @@ public final class WeaverLib {
         if (payAmbient(player, Inscriptions.FEE)) {
             Inscriptions.bind(stack, inscription);
             message(player, "inscribe_bound", words);
+            WarpCasting.addInscriptionWarp(player);
         }
     }
 
@@ -359,14 +358,12 @@ public final class WeaverLib {
     private static CastPayment payCast(ServerPlayer player, ItemStack source, float normalCost) {
         var inscription = Inscriptions.get(source);
         if (inscription == null) {
-            boolean hasWarp = WarpHelper.getWarp(player).get(WarpType.TEMPORARY) > 0;
+            boolean hasWarp = WarpCasting.hasTemporaryWarp(player);
             float cost = hasWarp ? normalCost : normalCost * WarpCasting.UNFUELED_MULTIPLIER;
             if (!payAmbient(player, cost)) {
                 return null;
             }
-            if (hasWarp) {
-                WarpHelper.addWarp(player, -1, WarpType.TEMPORARY);
-            }
+            WarpCasting.addCastingWarp(player);
             return new CastPayment(cost, !hasWarp);
         }
         int cost = inscription.cost(normalCost);
