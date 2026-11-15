@@ -1,4 +1,4 @@
-# WeaverLib 0.1.13
+# WeaverLib 0.1.14
 
 An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and Java 21. By Ex.
 
@@ -50,4 +50,4 @@ Lux affects players. Sana can heal living targets. Pulse charges per affected ta
 
 ## Thaumaturge focus magic
 
-Native effects, deliveries, modifiers, and flows are available as runes and chat words. See the [component and argument reference](docs/thaumaturge-components.md) for the full catalog, spell construction, settings, and aspect choices.
+Native effects, deliveries, modifiers, and flows have Latin-inspired chat words and drawn runes. For example, `incant cura auge fulgor` casts Heal through Amplify and Beam. Old English spell words still work. See the [component and argument reference](docs/thaumaturge-components.md) for the full catalog, spell construction, settings, and aspect choices.

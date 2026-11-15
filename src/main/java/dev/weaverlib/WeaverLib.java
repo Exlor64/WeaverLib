@@ -73,7 +73,7 @@ public final class WeaverLib {
             }
         }
 
-        if (words.length == 2 && words[1].strip().equalsIgnoreCase("halt")) {
+        if (words.length == 2 && FocusComponent.spoken(words[1].strip()) == FocusComponent.named("halt")) {
             castHalt(caster);
             return true;
         }

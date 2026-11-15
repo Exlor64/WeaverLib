@@ -31,14 +31,14 @@ public final class FocusSpell {
         }
         List<PartInput> parts = new ArrayList<>();
         for (String word : words) {
-            if (word.equals("null")) {
+            if (word.equals("nihil") || word.equals("null")) {
                 continue;
             }
             var matcher = TOKEN.matcher(word);
             if (!matcher.matches()) {
                 throw invalid("focus_arguments");
             }
-            FocusComponent part = FocusComponent.named(matcher.group(1));
+            FocusComponent part = FocusComponent.spoken(matcher.group(1));
             if (part == null) {
                 throw invalid("unknown_words");
             }
@@ -124,7 +124,7 @@ public final class FocusSpell {
             if (field.length != 2 || field[1].isEmpty() || !seen.add(field[0])) {
                 throw invalid("focus_arguments");
             }
-            if (field[1].equals("null")) {
+            if (field[1].equals("nihil") || field[1].equals("null")) {
                 if (field[0].equals("aspect") ? !part.aspect().selectable() : part.setting(field[0]).isEmpty()) {
                     throw invalid("focus_arguments");
                 }
