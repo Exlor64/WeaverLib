@@ -52,7 +52,9 @@ final class RuneCanvas extends Screen {
     private Component runeStatus;
     private InputConstants.Key canvasKey;
     private int drawButton;
-    private int guide = -1;
+    private boolean guideEnabled;
+    private boolean guideKeyHeld;
+    private int guide;
     private final Map<Integer, Map<String, String>> arguments = new HashMap<>();
     private SpellPart editingPart;
     private int editingGlyph;
@@ -79,6 +81,7 @@ final class RuneCanvas extends Screen {
     public void removed() {
         finishStroke();
         editingPart = null;
+        guideKeyHeld = false;
         super.removed();
     }
 
@@ -184,6 +187,10 @@ final class RuneCanvas extends Screen {
             castAndClose();
             return true;
         }
+        if (key == GLFW.GLFW_KEY_G) {
+            guideKeyHeld = false;
+            return true;
+        }
         return super.keyReleased(key, scanCode, modifiers);
     }
 
@@ -262,12 +269,24 @@ final class RuneCanvas extends Screen {
             return true;
         }
         if (key == GLFW.GLFW_KEY_G) {
-            int delta = hasShiftDown() ? -1 : 1;
-            guide = Math.floorMod(guide + 1 + delta, GUIDES.size() + 1) - 1;
-            playRuneTurn();
+            if (!guideKeyHeld) {
+                guideKeyHeld = true;
+                guideEnabled = !guideEnabled;
+                playRuneTurn();
+            }
             return true;
         }
         return super.keyPressed(key, scanCode, modifiers);
+    }
+
+    @Override
+    public boolean mouseScrolled(double x, double y, double horizontal, double vertical) {
+        if (guideEnabled && editingPart == null && vertical != 0) {
+            guide = Math.floorMod(guide + (vertical < 0 ? 1 : -1), GUIDES.size());
+            playRuneTurn();
+            return true;
+        }
+        return super.mouseScrolled(x, y, horizontal, vertical);
     }
 
     private void playRuneTurn() {
@@ -390,7 +409,7 @@ final class RuneCanvas extends Screen {
             graphics.vLine(x + offset, y, y + size, rule);
         }
 
-        boolean traceEffect = guide >= 0 && guide < Weave.values().length && glyphs.isEmpty();
+        boolean traceEffect = guideEnabled && guide < Weave.values().length && glyphs.isEmpty();
         if (traceEffect) {
             int side = size / 2;
             int inset = (size - side) / 2;
@@ -422,18 +441,19 @@ final class RuneCanvas extends Screen {
             drawArguments(graphics, guideCenter, textY, size);
             return;
         }
-        Component guideTitle = guide < 0
+        Component guideTitle = !guideEnabled
             ? Component.translatable("weaverlib.guide_off")
             : Component.translatable("weaverlib.guide_active", GUIDES.get(guide).id());
         drawPageText(graphics, guideTitle, guideCenter, guideHeadingY, size);
-        if (guide >= 0 && !traceEffect) {
+        if (guideEnabled && !traceEffect) {
             int preview = Math.max(24, size * 2 / 5);
             drawGuide(graphics, GUIDES.get(guide), guideCenter - preview / 2, y - 1, preview);
             textY = y + preview + 2;
         }
         drawPageText(graphics, Component.translatable("weaverlib.canvas_slots"), guideCenter, textY, size);
         drawPageText(graphics, Component.translatable("weaverlib.canvas_next"), guideCenter, textY + 10, size);
-        drawPageText(graphics, Component.translatable("weaverlib.canvas_guide"), guideCenter, textY + 20, size);
+        drawPageText(graphics, Component.translatable(guideEnabled ? "weaverlib.canvas_guide_scroll"
+            : "weaverlib.canvas_guide"), guideCenter, textY + 20, size);
         drawPageText(graphics, Component.translatable("weaverlib.canvas_undo"), guideCenter, textY + 30, size);
         drawPageText(graphics, Component.translatable("weaverlib.canvas_cast"), guideCenter, textY + 40, size);
         drawPageText(graphics, Component.translatable("weaverlib.canvas_arguments"), guideCenter, textY + 50, size);

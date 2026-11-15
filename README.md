@@ -1,4 +1,4 @@
-# WeaverLib 0.1.20
+# WeaverLib 0.1.21
 
 An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and Java 21. By Ex.
 
@@ -15,7 +15,7 @@ Run `gradlew.bat build` on Windows or `./gradlew build` on Linux/macOS with a Ja
 
 Type incantations in regular chat with no slash. If the first word is `incant` (case-insensitive), only players within 10 blocks in the same dimension receive the message, even if the spell fails. Casting is available to living, non-spectator players who have earned the Warp unlock.
 
-Hold **K** to open the parchment canvas and **G** to cycle the optional rune guides. The numbers mark the start of each stroke. The right page shows the latest rune match, and Tab and G play a quiet page-turn sound when you change runes.
+Hold **K** to open the parchment canvas. Press **G** to show or hide the rune guide, then scroll to browse. The numbers mark the start of each stroke. The right page shows the latest rune match, and a quiet page-turn sound plays when you press Tab to finish a rune, toggle the guide, or scroll to another guide.
 
 - **Lux** uses a V drawn from upper left, down, then up to the right. Draw the crossbar left to right.
 - **Sana** starts with a rising, kinked stem that turns right at the top. From the middle of the stem, draw a short branch toward the lower right. Finish with a detached clockwise ring, starting at the top.
@@ -42,7 +42,7 @@ Operators can type `/weaverwarp unlock` or `/weaverwarp lock` for themselves. Ad
 
 ## Lux and Sana rune slots
 
-Draw the main effect near the center. Press **Tab** between complete runes to mark the end of a glyph. Draw smaller modifiers around the effect. They are read clockwise from the top, with nearer runes first at the same angle. **G** cycles the guides. Main effects can be traced on the canvas, and modifier guides appear on the right page.
+Draw the main effect near the center. Press **Tab** between complete runes to mark the end of a glyph. Draw smaller modifiers around the effect. They are read clockwise from the top, with nearer runes first at the same angle. Main effects can be traced on the canvas, and modifier guides appear on the right page.
 
 | Slot | Default | Modifier |
 | --- | --- | --- |
@@ -60,7 +60,7 @@ Native effects, deliveries, modifiers, and flows have Latin-inspired chat words 
 
 ## Inscribed items
 
-Hold a single item in your main hand. Draw **Inscribe** first, press **Tab**, then draw the spell normally. Put the spell's main rune near the center and its other runes clockwise around it. Inscribe's position is ignored when ordering the stored spell. Select **Inscribe** in the canvas guide with **G** to see the three strokes. You can also say `incant insculpe cura auge fulgor` to bind Heal + Amplify + Beam. The earlier word `inscribe` still works.
+Hold a single item in your main hand. Draw **Inscribe** first, press **Tab**, then draw the spell normally. Put the spell's main rune near the center and its other runes clockwise around it. Inscribe's position is ignored when ordering the stored spell. Open the guide with **G** and scroll to **Inscribe** to see its three strokes. You can also say `incant insculpe cura auge fulgor` to bind Heal + Amplify + Beam. The earlier word `inscribe` still works.
 
 Inscribe requires the Warp unlock and costs **150 Vis** from the local aura. It binds the spell without casting it. An item can hold one inscription. Its tooltip shows the stored incantation or rune names, the battery charge, and the casting multiplier.
 

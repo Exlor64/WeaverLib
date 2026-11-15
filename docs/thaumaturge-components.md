@@ -5,7 +5,7 @@ This reference covers the player-facing spell parts in Thaumaturge 1.1.0. Weaver
 ## Using the components
 
 - **Words.** In regular chat, type `incant` followed by the effect and any additional parts. The incantation uses the usual ten-block chat radius. Use the incantation column for the Latin-inspired word. The English component names are also accepted.
-- **Runes.** Hold the canvas key, draw the effect near the center, then put the remaining parts clockwise from twelve o’clock. Press **Tab** between complete glyphs. **G** cycles forward through the guides, and **Shift+G** cycles backward. Release the canvas key to cast.
+- **Runes.** Hold the canvas key, draw the effect near the center, then put the remaining parts clockwise from twelve o’clock. Press **Tab** between complete glyphs. **G** toggles the guide, and the scroll wheel browses runes while it is open. Release the canvas key to cast.
 - **Arguments.** For words, append `[key=value,key=value]` directly to the part name, with no spaces inside the brackets. For a drawn part, press **R** after completing its strokes. Use **↑/↓** to pick a setting and **←/→** to change it. Press **R** again to return to drawing. The editor uses the settings provided by the installed Thaumaturge registries.
 - **Defaults.** Omitted arguments use Thaumaturge's defaults. In words, `nihil` can be supplied for a named field, such as `fulgor[range=nihil]`. A standalone **Null** rune or `nihil` word can also be included and is skipped. Heal and Imbue default to Self. Other effects default to Touch. An explicit delivery takes precedence.
 - **Order.** Each delivery, modifier or ordinary flow wraps the preceding effect or subspell. Put a modifier after the part whose behavior it should influence. Branch combines the two preceding subspells into a fork. A delivery added after Branch feeds both branches. Relay, Delay and Sieve operate before the subspell they wrap. WeaverLib launches instant casts on chat submit or canvas release.
@@ -22,7 +22,7 @@ This reference covers the player-facing spell parts in Thaumaturge 1.1.0. Weaver
 
 ## Drawing the glyphs
 
-Choose a glyph with **G** or **Shift+G** to see its exact shape and numbered starts. Draw each stroke continuously from its numbered start, then lift before the next stroke. The recognizer checks stroke count, order, direction, and relative placement first. For a close outline it can also accept a different starting point, direction, or one extra or missing pen lift. If two outlines are too close, the canvas asks for a clearer drawing. It accepts changes in overall size and canvas position. Start by practicing broad, simple shapes such as Heal. Curves are part of the templates for glyphs such as Fire, Air, and Cloud.
+Open the guide with **G**, then scroll to a glyph to see its exact shape and numbered starts. Draw each stroke continuously from its numbered start, then lift before the next stroke. The recognizer checks stroke count, order, direction, and relative placement first. For a close outline it can also accept a different starting point, direction, or one extra or missing pen lift. If two outlines are too close, the canvas asks for a clearer drawing. It accepts changes in overall size and canvas position. Start by practicing broad, simple shapes such as Heal. Curves are part of the templates for glyphs such as Fire, Air, and Cloud.
 
 ## Native arguments
 
