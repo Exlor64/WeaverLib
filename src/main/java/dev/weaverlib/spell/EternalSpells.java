@@ -131,9 +131,10 @@ public final class EternalSpells {
         if (source != null) {
             return Inscriptions.payContinuation(player, source, pulse.cost());
         }
+        float cost = WarpCasting.continuationCost(pulse.continuation().state(), pulse.cost());
         try (Transaction payment = Transaction.openRoot()) {
-            float drained = AuraHelper.drainVis(level, player.blockPosition(), pulse.cost(), payment);
-            if (!(drained >= pulse.cost())) {
+            float drained = AuraHelper.drainVis(level, player.blockPosition(), cost, payment);
+            if (!(drained >= cost)) {
                 return false;
             }
             payment.commit();

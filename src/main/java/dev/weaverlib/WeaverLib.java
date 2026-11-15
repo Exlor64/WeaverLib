@@ -2,6 +2,8 @@ package dev.weaverlib;
 
 import com.leclowndu93150.thaumaturge.api.aura.AuraHelper;
 import com.leclowndu93150.thaumaturge.api.transaction.Transaction;
+import com.leclowndu93150.thaumaturge.api.warp.WarpHelper;
+import com.leclowndu93150.thaumaturge.api.warp.WarpType;
 import com.leclowndu93150.thaumaturge.api.casters.FocusCaster;
 import com.leclowndu93150.thaumaturge.api.spell.FocusTier;
 import com.leclowndu93150.thaumaturge.api.spell.Spell;
@@ -22,6 +24,7 @@ import dev.weaverlib.spell.EternalSpells;
 import dev.weaverlib.spell.InscribedSpell;
 import dev.weaverlib.spell.Inscriptions;
 import dev.weaverlib.spell.WeaverParts;
+import dev.weaverlib.spell.WarpCasting;
 import java.util.Comparator;
 import java.util.List;
 import java.util.HashMap;
@@ -190,7 +193,7 @@ public final class WeaverLib {
         }
         Spell spell = Spell.empty().withRoot(SpellNode.of(Spell.ORIGIN).then(SpellNode.of(halt)));
         var pre = SpellEngine.firePre(player, ItemStack.EMPTY, spell, 1, 0);
-        if (!pre.isCanceled()) {
+        if (!pre.isCanceled() && payCast(player, ItemStack.EMPTY, 0) != null) {
             SpellEngine.execute(player, ItemStack.EMPTY, spell,
                 List.of(SpellTarget.entity(player, player.getLookAngle())), 1);
         }
@@ -337,30 +340,48 @@ public final class WeaverLib {
 
         var pre = SpellEngine.firePre(player, source, spell, 1, summary.vis());
         if (pre.isCanceled() || !Float.isFinite(pre.visCost()) || !Float.isFinite(pre.power())
-                || pre.visCost() < 0 || pre.power() <= 0 || !payCast(player, source, pre.visCost())) {
+                || pre.visCost() < 0 || pre.power() <= 0) {
+            return;
+        }
+        CastPayment payment = payCast(player, source, pre.visCost());
+        if (payment == null) {
             return;
         }
 
         int now = player.serverLevel().getServer().getTickCount();
         NEXT_ATTEMPT.put(player.getUUID(), now + Math.max(20, summary.cooldown()));
         CasterManager.setCooldown(player, summary.cooldown());
-        SpellEngine.execute(player, source, spell, List.of(SpellTarget.origin(player)), pre.power());
+        WarpCasting.execute(player, source, spell, pre.power(), payment.unfueled());
     }
 
-    private static boolean payCast(ServerPlayer player, ItemStack source, float normalCost) {
+    private record CastPayment(float vis, boolean unfueled) {}
+
+    private static CastPayment payCast(ServerPlayer player, ItemStack source, float normalCost) {
         var inscription = Inscriptions.get(source);
         if (inscription == null) {
-            return payAmbient(player, normalCost);
+            boolean hasWarp = WarpHelper.getWarp(player).get(WarpType.TEMPORARY) > 0;
+            float cost = hasWarp ? normalCost : normalCost * WarpCasting.UNFUELED_MULTIPLIER;
+            if (!payAmbient(player, cost)) {
+                return null;
+            }
+            if (hasWarp) {
+                WarpHelper.addWarp(player, -1, WarpType.TEMPORARY);
+            }
+            return new CastPayment(cost, !hasWarp);
         }
         int cost = inscription.cost(normalCost);
         if (!RechargeAccess.spendVis(source, cost)) {
             message(player, "inscription_no_vis", cost, RechargeAccess.storedVis(source));
-            return false;
+            return null;
         }
-        return true;
+        return new CastPayment(cost, false);
     }
 
     private static boolean payAmbient(ServerPlayer player, float cost) {
+        if (!Float.isFinite(cost)) {
+            message(player, "insufficient_vis", cost);
+            return false;
+        }
         if (cost > 0) {
             try (Transaction payment = Transaction.openRoot()) {
                 float drained = AuraHelper.drainVis(player.serverLevel(), player.blockPosition(), cost, payment);
@@ -403,7 +424,8 @@ public final class WeaverLib {
 
         int cost = (int) Math.ceil(spell.effect().cost() * (spell.surge() ? 1.5 : 1))
             * targets.size() + (spell.pulse() ? 2 : 0);
-        if (!payCast(player, source, cost)) {
+        CastPayment payment = payCast(player, source, cost);
+        if (payment == null) {
             return false;
         }
 
@@ -413,8 +435,7 @@ public final class WeaverLib {
                 case SANA -> target.heal((float) (4 * strength));
             }
         }
-        var inscription = Inscriptions.get(source);
-        message(player, "cast", spell.effect().word(), inscription == null ? cost : inscription.cost(cost));
+        message(player, "cast", spell.effect().word(), (int) payment.vis());
         return true;
     }
 

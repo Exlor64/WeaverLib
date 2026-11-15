@@ -1,4 +1,4 @@
-# WeaverLib 0.1.19
+# WeaverLib 0.1.20
 
 An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and Java 21. By Ex.
 
@@ -25,6 +25,12 @@ Drag with the left mouse button, or the right mouse button if you bind the canva
 The server recognizes the submitted ink and runs the same spell logic for both inputs. Vis comes from Thaumaturge's aura in the caster's current chunk. Insufficient Vis, unknown inputs, full-health healing and redundant night vision leave the aura unspent. There is a shared one-second interval between attempts, and native spells also use Thaumaturge’s computed cooldown. Lux and Sana each accept up to three optional modifiers.
 
 The geometry matcher is adapted from the MIT-licensed AonDor port kit. See LICENSE for its copyright notice.
+
+## Temporary Warp and casting costs
+
+A drawn or spoken spell consumes **1 Temporary Warp** and its normal ambient Vis cost. With no Temporary Warp, the same spell costs **3× Vis**. A rejected cast or failed initial payment spends neither resource. Normal and Permanent Warp still determine the unlock.
+
+Leap surcharges and Eternal upkeep use the Vis multiplier chosen when you cast. Automatic repeats spend no additional Warp. Item activation uses its own battery pricing. Inscribe and Erase keep their existing item-editing costs.
 
 ## Unlocking rune and word casting
 

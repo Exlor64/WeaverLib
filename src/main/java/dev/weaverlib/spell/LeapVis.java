@@ -45,7 +45,7 @@ final class LeapVis {
         }
 
         boolean grounded = caster.onGround();
-        float surcharge = streak.surcharge(grounded);
+        float surcharge = WarpCasting.continuationCost(context.state(), streak.surcharge(grounded));
         streak.lastActivation = new WeakReference<>(context);
         streak.paid = false;
         var source = Inscriptions.sourceId(context.state());
