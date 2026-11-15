@@ -2,6 +2,16 @@ package dev.weaverlib;
 
 import com.leclowndu93150.thaumaturge.api.aura.AuraHelper;
 import com.leclowndu93150.thaumaturge.api.transaction.Transaction;
+import com.leclowndu93150.thaumaturge.api.casters.FocusCaster;
+import com.leclowndu93150.thaumaturge.api.spell.FocusTier;
+import com.leclowndu93150.thaumaturge.api.spell.Spell;
+import com.leclowndu93150.thaumaturge.api.spell.SpellProblem;
+import com.leclowndu93150.thaumaturge.api.spell.Spells;
+import com.leclowndu93150.thaumaturge.api.spell.cast.SpellTarget;
+import com.leclowndu93150.thaumaturge.content.casters.CasterManager;
+import com.leclowndu93150.thaumaturge.content.spell.engine.SpellEngine;
+import dev.weaverlib.rune.FocusComponent;
+import dev.weaverlib.rune.FocusSpell;
 import dev.weaverlib.rune.RuneSpell;
 import dev.weaverlib.rune.Weave;
 import java.util.Comparator;
@@ -20,6 +30,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.IEventBus;
@@ -31,6 +42,7 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 @Mod(WeaverLib.ID)
 public final class WeaverLib {
     public static final String ID = "weaverlib";
+    private static final FocusTier RUNE_FOCUS_LIMITS = new FocusTier(75, 14, 4, 4);
     private static final double GAZE_RANGE = 8;
     private static final double PULSE_RADIUS = 3;
     private static final int MAX_PULSE_TARGETS = 8;
@@ -57,26 +69,49 @@ public final class WeaverLib {
 
         if (beginAttempt(caster)) {
             Weave spell = words.length == 2 ? Weave.fromWords(words[1]) : null;
-            if (spell == null) {
-                message(caster, "unknown_words");
-            } else {
+            if (spell != null) {
                 cast(caster, RuneSpell.basic(spell, 1.0));
+            } else if (words.length == 2) {
+                Spell focus;
+                try {
+                    focus = FocusSpell.fromWords(words[1], caster.registryAccess());
+                } catch (IllegalArgumentException invalidSpell) {
+                    message(caster, invalidSpell.getMessage());
+                    return true;
+                }
+                castFocus(caster, focus);
+            } else {
+                message(caster, "unknown_words");
             }
         }
         return true;
     }
 
     private void registerPayloads(RegisterPayloadHandlersEvent event) {
-        event.registrar("2").playToServer(RuneCast.TYPE, RuneCast.CODEC, (payload, context) -> {
+        event.registrar("3").playToServer(RuneCast.TYPE, RuneCast.CODEC, (payload, context) -> {
             if (context.player() instanceof ServerPlayer player && beginAttempt(player)) {
-                RuneSpell spell;
-                try {
-                    spell = RuneSpell.compile(payload.glyphs());
-                } catch (IllegalArgumentException invalidRune) {
-                    message(player, invalidRune.getMessage());
-                    return;
+                if (FocusComponent.recognize(payload.glyphs().getFirst()) != null) {
+                    Spell focus;
+                    try {
+                        focus = FocusSpell.fromRunes(payload.glyphs(), payload.arguments(), player.registryAccess());
+                    } catch (IllegalArgumentException invalidRune) {
+                        message(player, invalidRune.getMessage());
+                        return;
+                    }
+                    castFocus(player, focus);
+                } else {
+                    RuneSpell spell;
+                    try {
+                        if (payload.arguments().stream().anyMatch(argument -> !argument.isEmpty())) {
+                            throw new IllegalArgumentException("focus_arguments");
+                        }
+                        spell = RuneSpell.compile(payload.glyphs());
+                    } catch (IllegalArgumentException invalidRune) {
+                        message(player, invalidRune.getMessage());
+                        return;
+                    }
+                    cast(player, spell);
                 }
-                cast(player, spell);
             }
         });
     }
@@ -93,6 +128,54 @@ public final class WeaverLib {
         }
         NEXT_ATTEMPT.put(player.getUUID(), now + 20);
         return true;
+    }
+
+    private static void castFocus(ServerPlayer player, Spell spell) {
+        if (CasterManager.isOnCooldown(player)) {
+            message(player, "focus_cooldown");
+            return;
+        }
+        var summary = Spells.analyze(spell, RUNE_FOCUS_LIMITS, player.registryAccess(), player);
+        if (!summary.valid()) {
+            summary.problems().stream().filter(SpellProblem::fatal).findFirst()
+                .ifPresent(problem -> player.displayClientMessage(problem.message(), true));
+            return;
+        }
+
+        ItemStack held = player.getMainHandItem().getItem() instanceof FocusCaster
+            ? player.getMainHandItem() : player.getOffhandItem();
+        boolean hasCaster = held.getItem() instanceof FocusCaster;
+        if (spell.nodes().stream().anyMatch(node -> node.part().equals(FocusComponent.named("plan").key())) && !hasCaster) {
+            message(player, "focus_plan_wand");
+            return;
+        }
+        if (spell.nodes().stream().anyMatch(node -> node.part().equals(FocusComponent.named("exchange").key()))
+                && (!(held.getItem() instanceof FocusCaster caster) || caster.rememberedBlock(held) == null)) {
+            message(player, "focus_exchange_wand");
+            return;
+        }
+
+        var pre = SpellEngine.firePre(player, ItemStack.EMPTY, spell, 1, summary.vis());
+        if (pre.isCanceled() || !Float.isFinite(pre.visCost()) || !Float.isFinite(pre.power())
+                || pre.visCost() < 0 || pre.power() <= 0) {
+            return;
+        }
+        float cost = pre.visCost();
+        if (cost > 0) {
+            try (Transaction payment = Transaction.openRoot()) {
+                float drained = AuraHelper.drainVis(player.serverLevel(), player.blockPosition(), cost, payment);
+                if (!(drained >= cost)) {
+                    message(player, "insufficient_vis", cost);
+                    return;
+                }
+                payment.commit();
+            }
+        }
+
+        int now = player.serverLevel().getServer().getTickCount();
+        NEXT_ATTEMPT.put(player.getUUID(), now + Math.max(20, summary.cooldown()));
+        CasterManager.setCooldown(player, summary.cooldown());
+        SpellEngine.execute(player, ItemStack.EMPTY, spell, List.of(SpellTarget.origin(player)), pre.power());
     }
 
     private static boolean cast(ServerPlayer player, RuneSpell spell) {

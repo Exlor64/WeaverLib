@@ -2,8 +2,6 @@ package dev.weaverlib.rune;
 
 import dev.weaverlib.rune.AonDrawing.Point;
 import dev.weaverlib.rune.RuneModifier.Slot;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 public record RuneSpell(Weave effect, double potency, boolean pulse, boolean gaze, boolean surge) {
@@ -12,7 +10,7 @@ public record RuneSpell(Weave effect, double potency, boolean pulse, boolean gaz
     }
 
     public static RuneSpell compile(List<List<List<Point>>> glyphs) {
-        if (glyphs.isEmpty() || glyphs.size() > AonDrawing.MAX_GLYPHS) {
+        if (glyphs.isEmpty() || glyphs.size() > 1 + Slot.values().length) {
             throw new IllegalArgumentException("argument_layout");
         }
         var match = Weave.recognize(glyphs.getFirst());
@@ -21,16 +19,13 @@ public record RuneSpell(Weave effect, double potency, boolean pulse, boolean gaz
         }
         Weave effect = Weave.fromWords(match.template().id());
         Point center = AonDrawing.center(glyphs.getFirst());
-        var modifiers = new ArrayList<>(glyphs.subList(1, glyphs.size()));
-        modifiers.sort(Comparator.comparingDouble((List<List<Point>> glyph) ->
-                AonDrawing.clockwiseAngle(center, AonDrawing.center(glyph)))
-            .thenComparingDouble(glyph -> distance(center, AonDrawing.center(glyph))));
+        var order = AonDrawing.clockwiseOrder(glyphs);
         boolean pulse = false;
         boolean gaze = false;
         boolean surge = false;
         var slots = Slot.values();
-        for (int i = 0; i < modifiers.size(); i++) {
-            var glyph = modifiers.get(i);
+        for (int i = 0; i < order.size() - 1; i++) {
+            var glyph = glyphs.get(order.get(i + 1));
             if (distance(center, AonDrawing.center(glyph)) < .03) {
                 throw new IllegalArgumentException("argument_layout");
             }

@@ -4,7 +4,7 @@ import java.util.List;
 
 /** Bounds shared by canvas capture, network decoding, and recognition. */
 public final class AonDrawing {
-    public static final int MAX_GLYPHS = 4;
+    public static final int MAX_GLYPHS = 8;
     public static final int MAX_STROKES = 16;
     public static final int MAX_POINTS = 48;
 
@@ -38,6 +38,18 @@ public final class AonDrawing {
             }
         }
         return new Point((minX + maxX) / 2, (minY + maxY) / 2);
+    }
+
+    static List<Integer> clockwiseOrder(List<List<List<Point>>> glyphs) {
+        var centers = glyphs.stream().map(AonDrawing::center).toList();
+        Point root = centers.getFirst();
+        var indexes = new java.util.ArrayList<Integer>();
+        indexes.add(0);
+        indexes.addAll(java.util.stream.IntStream.range(1, glyphs.size()).boxed()
+            .sorted(java.util.Comparator.comparingDouble((Integer i) -> clockwiseAngle(root, centers.get(i)))
+                .thenComparingDouble(i -> Math.hypot(centers.get(i).x() - root.x(), centers.get(i).y() - root.y())))
+            .toList());
+        return indexes;
     }
 
     public static List<List<Point>> copyStrokes(List<List<Point>> strokes) {

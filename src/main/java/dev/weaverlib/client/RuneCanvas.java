@@ -6,6 +6,13 @@ import dev.weaverlib.RuneCast;
 import dev.weaverlib.rune.AonDrawing;
 import dev.weaverlib.rune.AonDrawing.Point;
 import dev.weaverlib.rune.Weave;
+import dev.weaverlib.rune.FocusComponent;
+import dev.weaverlib.rune.FocusSpell;
+import com.leclowndu93150.thaumaturge.api.spell.Spells;
+import com.leclowndu93150.thaumaturge.api.spell.part.SpellPart;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import dev.weaverlib.rune.RuneModifier;
 import dev.weaverlib.rune.AonRecognition.Template;
 import java.util.Arrays;
@@ -30,13 +37,18 @@ final class RuneCanvas extends Screen {
     private static final int CAST_INK = 0xFFA01FDB;
     private static final List<Template> GUIDES = Stream.concat(
         Arrays.stream(Weave.values()).map(Weave::template),
-        Arrays.stream(RuneModifier.values()).map(RuneModifier::template)).toList();
+        Stream.concat(Arrays.stream(RuneModifier.values()).map(RuneModifier::template),
+            FocusComponent.TEMPLATES.stream())).toList();
     private final List<List<List<Point>>> glyphs = new ArrayList<>();
     private final List<List<Point>> strokes = new ArrayList<>();
     private final List<Point> activeStroke = new ArrayList<>();
     private final InputConstants.Key canvasKey;
     private final int drawButton;
     private int guide = -1;
+    private final Map<Integer, Map<String, String>> arguments = new HashMap<>();
+    private SpellPart editingPart;
+    private int editingGlyph;
+    private int editingField;
 
     RuneCanvas(InputConstants.Key canvasKey) {
         super(Component.translatable("weaverlib.canvas"));
@@ -89,6 +101,8 @@ final class RuneCanvas extends Screen {
     public boolean mouseClicked(double x, double y, int button) {
         if (button == drawButton && strokes.size() < AonDrawing.MAX_STROKES
                 && x >= left() && x <= left() + size() && y >= top() && y <= top() + size()) {
+            editingPart = null;
+            arguments.remove(glyphs.size());
             activeStroke.clear();
             activeStroke.add(point(x, y));
             return true;
@@ -134,7 +148,11 @@ final class RuneCanvas extends Screen {
             if (!strokes.isEmpty()) {
                 drawing.add(strokes);
             }
-            PacketDistributor.sendToServer(new RuneCast(drawing));
+            var settings = new ArrayList<String>(drawing.size());
+            for (int i = 0; i < drawing.size(); i++) {
+                settings.add(encodeArguments(arguments.getOrDefault(i, Map.of())));
+            }
+            PacketDistributor.sendToServer(new RuneCast(drawing, settings));
         }
         onClose();
     }
@@ -172,12 +190,32 @@ final class RuneCanvas extends Screen {
         if (canvasKey.equals(InputConstants.getKey(key, scanCode))) {
             return true;
         }
+        if (key == GLFW.GLFW_KEY_R && activeStroke.isEmpty()) {
+            if (editingPart == null) {
+                openArguments();
+            } else {
+                editingPart = null;
+            }
+            return true;
+        }
+        if (editingPart != null) {
+            if (key == GLFW.GLFW_KEY_UP || key == GLFW.GLFW_KEY_DOWN) {
+                editingField = Math.floorMod(editingField + (key == GLFW.GLFW_KEY_DOWN ? 1 : -1), argumentCount());
+                return true;
+            }
+            if (key == GLFW.GLFW_KEY_LEFT || key == GLFW.GLFW_KEY_RIGHT) {
+                changeArgument(key == GLFW.GLFW_KEY_RIGHT ? 1 : -1);
+                return true;
+            }
+        }
         if (key == GLFW.GLFW_KEY_Z && hasControlDown() && activeStroke.isEmpty()) {
             if (strokes.isEmpty() && !glyphs.isEmpty()) {
                 strokes.addAll(glyphs.removeLast());
             }
             if (!strokes.isEmpty()) {
                 strokes.removeLast();
+                arguments.remove(glyphs.size());
+                editingPart = null;
             }
             return true;
         }
@@ -185,14 +223,83 @@ final class RuneCanvas extends Screen {
             if (!strokes.isEmpty() && glyphs.size() < AonDrawing.MAX_GLYPHS - 1) {
                 glyphs.add(List.copyOf(strokes));
                 strokes.clear();
+                editingPart = null;
             }
             return true;
         }
         if (key == GLFW.GLFW_KEY_G) {
-            guide = guide == GUIDES.size() - 1 ? -1 : guide + 1;
+            int delta = hasShiftDown() ? -1 : 1;
+            guide = Math.floorMod(guide + 1 + delta, GUIDES.size() + 1) - 1;
             return true;
         }
         return super.keyPressed(key, scanCode, modifiers);
+    }
+
+    private void openArguments() {
+        if (minecraft.level == null || (strokes.isEmpty() && glyphs.isEmpty())) {
+            return;
+        }
+        editingGlyph = strokes.isEmpty() ? glyphs.size() - 1 : glyphs.size();
+        var ink = strokes.isEmpty() ? glyphs.getLast() : strokes;
+        FocusComponent component = FocusComponent.recognize(ink);
+        if (component != null) {
+            editingPart = Spells.part(minecraft.level.registryAccess(), component.key()).orElse(null);
+            editingField = 0;
+            if (editingPart != null && argumentCount() == 0) {
+                editingPart = null;
+            }
+        }
+    }
+
+    private int argumentCount() {
+        return editingPart.settings().size() + (editingPart.aspect().selectable() ? 1 : 0);
+    }
+
+    private void changeArgument(int delta) {
+        var values = arguments.computeIfAbsent(editingGlyph, ignored -> new LinkedHashMap<>());
+        if (editingField < editingPart.settings().size()) {
+            var spec = editingPart.settings().get(editingField);
+            int value = Integer.parseInt(values.getOrDefault(spec.key(), Integer.toString(spec.defaultValue())));
+            values.put(spec.key(), Integer.toString(spec.offset(value, delta)));
+        } else {
+            var ids = editingPart.aspect().options(minecraft.level.registryAccess()).stream()
+                .map(key -> key.location().toString()).toList();
+            int current = ids.indexOf(values.get("aspect")) + 1;
+            int next = Math.floorMod(current + delta, ids.size() + 1);
+            if (next == 0) {
+                values.remove("aspect");
+            } else {
+                values.put("aspect", ids.get(next - 1));
+            }
+        }
+        if (encodeArguments(values).length() > FocusSpell.MAX_ARGUMENT_BYTES) {
+            arguments.remove(editingGlyph);
+            editingPart = null;
+        }
+    }
+
+    private static String encodeArguments(Map<String, String> values) {
+        return values.entrySet().stream().map(entry -> entry.getKey() + "=" + entry.getValue())
+            .collect(java.util.stream.Collectors.joining(","));
+    }
+
+    private void drawArguments(GuiGraphics graphics, int x, int y, int width) {
+        var values = arguments.getOrDefault(editingGlyph, Map.of());
+        Component name;
+        Component value;
+        if (editingField < editingPart.settings().size()) {
+            var spec = editingPart.settings().get(editingField);
+            name = Component.translatable(spec.nameKey());
+            value = spec.label(Integer.parseInt(values.getOrDefault(spec.key(), Integer.toString(spec.defaultValue()))));
+        } else {
+            name = Component.translatable("weaverlib.aspect");
+            value = Component.literal(values.getOrDefault("aspect", "default"));
+        }
+        drawPageText(graphics, name, x, y, width);
+        drawPageText(graphics, value, x, y + 15, width);
+        drawPageText(graphics, Component.translatable("weaverlib.argument_cycle"), x, y + 32, width);
+        drawPageText(graphics, Component.translatable("weaverlib.argument_change"), x, y + 42, width);
+        drawPageText(graphics, Component.translatable("weaverlib.argument_done"), x, y + 52, width);
     }
 
     @Override
@@ -231,6 +338,10 @@ final class RuneCanvas extends Screen {
 
         int guideCenter = bookLeft() + bookWidth() * 74 / 100;
         int textY = y + Math.max(0, (size - 92) / 2);
+        if (editingPart != null) {
+            drawArguments(graphics, guideCenter, textY, size);
+            return;
+        }
         Component guideTitle = guide < 0
             ? Component.translatable("weaverlib.guide_off")
             : Component.translatable("weaverlib.guide_active", GUIDES.get(guide).id());
@@ -245,7 +356,7 @@ final class RuneCanvas extends Screen {
         drawPageText(graphics, Component.translatable("weaverlib.canvas_guide"), guideCenter, textY + 20, size);
         drawPageText(graphics, Component.translatable("weaverlib.canvas_undo"), guideCenter, textY + 30, size);
         drawPageText(graphics, Component.translatable("weaverlib.canvas_cast"), guideCenter, textY + 40, size);
-        drawPageText(graphics, Component.translatable("weaverlib.canvas_cancel"), guideCenter, textY + 50, size);
+        drawPageText(graphics, Component.translatable("weaverlib.canvas_arguments"), guideCenter, textY + 50, size);
     }
 
     private void drawGuide(GuiGraphics graphics, Template template, int x, int y, int side) {

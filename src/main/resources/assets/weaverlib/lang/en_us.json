@@ -2,7 +2,7 @@
   "key.categories.weaverlib": "WeaverLib",
   "key.weaverlib.canvas": "Hold Canvas",
   "weaverlib.canvas": "Canvas",
-  "weaverlib.canvas_slots": "Form › Target › Power",
+  "weaverlib.canvas_slots": "Clockwise from top",
   "weaverlib.canvas_next": "Tab · Next rune",
   "weaverlib.argument_layout": "Draw modifiers around the central rune.",
   "weaverlib.argument_form": "Expected a Form or Null rune.",
@@ -19,5 +19,16 @@
   "weaverlib.unknown_rune": "The lines fail to bind.",
   "weaverlib.no_effect": "The spell has no effect here.",
   "weaverlib.insufficient_vis": "The local aura lacks %s Vis.",
-  "weaverlib.cast": "%s · %s Vis"
+  "weaverlib.cast": "%s · %s Vis",
+  "weaverlib.canvas_arguments": "R · Rune settings",
+  "weaverlib.aspect": "Aspect",
+  "weaverlib.argument_cycle": "↑ ↓ Select setting",
+  "weaverlib.argument_change": "← → Change value",
+  "weaverlib.argument_done": "R · Done",
+  "weaverlib.focus_layout": "Start with effects and combine them with a delivery, modifier, or flow.",
+  "weaverlib.focus_arguments": "A Thaumaturge setting or aspect is invalid.",
+  "weaverlib.focus_unavailable": "This spell component is unavailable.",
+  "weaverlib.focus_cooldown": "Your focus magic is still recovering.",
+  "weaverlib.focus_plan_wand": "Plan needs a held Thaumaturge caster for its area controls.",
+  "weaverlib.focus_exchange_wand": "Exchange needs a held Thaumaturge caster with a remembered block."
 }

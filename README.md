@@ -1,4 +1,4 @@
-# WeaverLib 0.1.4
+# WeaverLib 0.1.5
 
 An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and Java 21. By Ex.
 
@@ -20,13 +20,13 @@ Hold **K** to open the parchment canvas and **G** to cycle the optional rune gui
 - **Lux** uses a V drawn from upper left, down, then up to the right. Draw the crossbar left to right.
 - **Sana** starts with a rising, kinked stem that turns right at the top. From the middle of the stem, draw a short branch toward the lower right. Finish with a detached clockwise ring, starting at the top.
 
-Drag with the left mouse button, or the right mouse button if you bind the canvas to left click. Use **Ctrl+Z** to undo a stroke. Release the canvas key to cast, or press **Esc** to cancel. Ordered matches have full potency. Recognizable shapes drawn out of order can cast at half potency for the same Vis cost.
+Drag with the left mouse button, or the right mouse button if you bind the canvas to left click. Use **Ctrl+Z** to undo a stroke. Release the canvas key to cast, or press **Esc** to cancel. Ordered Lux and Sana matches have full potency. Recognizable Lux and Sana shapes drawn out of order can cast at half potency for the same Vis cost.
 
-The server recognizes the submitted ink and runs the same spell logic for both inputs. Vis comes from Thaumaturge's aura in the caster's current chunk. Insufficient Vis, unknown inputs, full-health healing and redundant night vision leave the aura unspent. There is a shared one-second interval between attempts. Each canvas holds one main effect and up to three optional modifiers.
+The server recognizes the submitted ink and runs the same spell logic for both inputs. Vis comes from Thaumaturge's aura in the caster's current chunk. Insufficient Vis, unknown inputs, full-health healing and redundant night vision leave the aura unspent. There is a shared one-second interval between attempts, and native spells also use Thaumaturge’s computed cooldown. Lux and Sana each accept up to three optional modifiers.
 
 The geometry matcher is adapted from the MIT-licensed AonDor port kit. See LICENSE for its copyright notice.
 
-## Optional rune slots
+## Lux and Sana rune slots
 
 Draw the main effect near the center. Press **Tab** between complete runes to mark the end of a glyph. Draw smaller modifiers around the effect. They are read clockwise from the top, with nearer runes first at the same angle. **G** cycles the guides. Main effects can be traced on the canvas, and modifier guides appear on the right page.
 
@@ -39,3 +39,7 @@ Draw the main effect near the center. Press **Tab** between complete runes to ma
 **Null** skips one slot and uses its default. Trailing slots can be omitted. For example, draw Lux in the center, Null above it, and Gaze to its right to give another player night vision. For stronger self-healing, draw Sana with Null, Null, Surge in clockwise order.
 
 Lux affects players. Sana can heal living targets. Pulse charges per affected target plus 2 Vis. A malformed spell, missing target, or insufficient Vis leaves the aura unspent. Typed incantations use the effect's defaults.
+
+## Thaumaturge focus magic
+
+Native effects, deliveries, modifiers, and flows are available as runes and chat words. See the [component and argument reference](docs/thaumaturge-components.md) for the full catalog, spell construction, settings, and aspect choices.

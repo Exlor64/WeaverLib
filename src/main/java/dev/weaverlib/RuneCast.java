@@ -2,15 +2,17 @@ package dev.weaverlib;
 
 import dev.weaverlib.rune.AonDrawing;
 import dev.weaverlib.rune.AonDrawing.Point;
+import dev.weaverlib.rune.FocusSpell;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.DecoderException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
-public record RuneCast(List<List<List<Point>>> glyphs) implements CustomPacketPayload {
+public record RuneCast(List<List<List<Point>>> glyphs, List<String> arguments) implements CustomPacketPayload {
     public static final Type<RuneCast> TYPE =
         new Type<>(ResourceLocation.fromNamespaceAndPath(WeaverLib.ID, "rune_cast"));
     public static final StreamCodec<ByteBuf, RuneCast> CODEC =
@@ -20,13 +22,21 @@ public record RuneCast(List<List<List<Point>>> glyphs) implements CustomPacketPa
         if (glyphs.isEmpty() || glyphs.size() > AonDrawing.MAX_GLYPHS) {
             throw new IllegalArgumentException("Invalid rune glyph count");
         }
+        if (arguments.size() != glyphs.size()
+                || arguments.stream().anyMatch(value -> value.getBytes(StandardCharsets.UTF_8).length > FocusSpell.MAX_ARGUMENT_BYTES)) {
+            throw new IllegalArgumentException("Invalid rune arguments");
+        }
+        arguments = List.copyOf(arguments);
         glyphs = glyphs.stream().map(AonDrawing::copyStrokes).toList();
     }
 
     private static void encode(ByteBuf buffer, RuneCast payload) {
         buffer.writeByte(payload.glyphs.size());
-        for (var glyph : payload.glyphs) {
-            writeGlyph(buffer, glyph);
+        for (int i = 0; i < payload.glyphs.size(); i++) {
+            writeGlyph(buffer, payload.glyphs.get(i));
+            byte[] bytes = payload.arguments.get(i).getBytes(StandardCharsets.UTF_8);
+            buffer.writeByte(bytes.length);
+            buffer.writeBytes(bytes);
         }
     }
 
@@ -47,10 +57,16 @@ public record RuneCast(List<List<List<Point>>> glyphs) implements CustomPacketPa
             throw new DecoderException("Invalid rune glyph count");
         }
         var glyphs = new ArrayList<List<List<Point>>>(glyphCount);
+        var arguments = new ArrayList<String>(glyphCount);
         for (int index = 0; index < glyphCount; index++) {
             glyphs.add(readGlyph(buffer));
+            int length = buffer.readUnsignedByte();
+            if (length > FocusSpell.MAX_ARGUMENT_BYTES) {
+                throw new DecoderException("Rune arguments too long");
+            }
+            arguments.add(buffer.readCharSequence(length, StandardCharsets.UTF_8).toString());
         }
-        return new RuneCast(glyphs);
+        return new RuneCast(glyphs, arguments);
     }
 
     private static List<List<Point>> readGlyph(ByteBuf buffer) {
