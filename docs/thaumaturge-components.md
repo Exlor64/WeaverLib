@@ -114,7 +114,7 @@ These components are available to drawn runes and spoken incantations. They use 
 
 | Component | Incantation | Behavior | Optional argument |
 | --- | --- | --- | --- |
-| `leap` | `salta` | Pushes a living target along its current look direction, including up or down. Defaults to Self. | `strength` 1–4, default **1**. |
+| `leap` | `salta` | Pushes a living target along its current look direction, including up or down. Defaults to Self. Each prior Leap in the caster’s current airborne streak adds 3 Vis to the next activation. Landing resets the surcharge. | `strength` 1–4, default **1**. |
 | `eternal` | `aeternum` | Runs its wrapped subspell immediately, then repeats it at the same power on the original targets. Each pulse charges the wrapped subspell's Vis cost from the caster's current chunk, with a minimum of 1 Vis. | `interval` 10–100 ticks, step 10, default **20** (one second). |
 | `halt` | `siste` | Stops an active or pending Eternal loop. Alone, Halt targets you, costs no Vis, and works during cooldown. Add a delivery to use it on another player at the regular cast cost. | None. |
 

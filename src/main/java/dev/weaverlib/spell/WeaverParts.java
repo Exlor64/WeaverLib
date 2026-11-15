@@ -31,6 +31,7 @@ public final class WeaverParts {
     public static void register(IEventBus modBus) {
         BEHAVIORS.register(modBus);
         EternalSpells.register(modBus);
+        LeapVis.register(modBus);
     }
 
     private static final class Leap extends AbstractEffectBehavior {
@@ -44,7 +45,7 @@ public final class WeaverParts {
             double impulse = Math.clamp(power * (.55 + .25 * ctx.setting("strength")), 0, 3);
             if (impulse > 0 && Double.isFinite(impulse)
                     && target.entity().orElse(null) instanceof LivingEntity living
-                    && living.isAlive() && !living.isSpectator()) {
+                    && living.isAlive() && !living.isSpectator() && LeapVis.payForActivation(ctx)) {
                 living.push(living.getLookAngle().scale(impulse));
                 living.hurtMarked = true;
                 ctx.fx().impact(ctx.part().fx(), living.getBoundingBox().getCenter(), ctx.color());

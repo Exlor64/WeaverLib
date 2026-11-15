@@ -124,8 +124,19 @@ public final class EternalSpells {
         session.nextTick = session.level.getGameTime() + pulse.interval();
         var continuation = pulse.continuation();
         // A paid pulse gets its own native touch budget.
+        session.repeatingCastId = UUID.randomUUID();
         Spells.resume(session.level, new SpellContinuation(continuation.nodes(), continuation.state(),
-            continuation.caster(), UUID.randomUUID()), targets);
+            continuation.caster(), session.repeatingCastId), targets);
+    }
+
+    static boolean stopUnpaidLeap(ServerPlayer player, UUID castId) {
+        Session session = player.getExistingData(SESSION).orElse(null);
+        if (session == null || (!castId.equals(session.castId) && !castId.equals(session.repeatingCastId))) {
+            return false;
+        }
+        player.removeData(SESSION);
+        notify(player, "eternal_no_vis");
+        return true;
     }
 
     private static boolean validTarget(ServerLevel level, SpellTarget target) {
@@ -174,6 +185,7 @@ public final class EternalSpells {
         private final UUID castId;
         private final ServerLevel level;
         private Pulse pulse;
+        private UUID repeatingCastId;
         private long nextTick;
 
         private Session() {

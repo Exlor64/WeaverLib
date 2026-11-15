@@ -48,6 +48,7 @@
   "spell.weaverlib.halt.desc": "Ends the target's Eternal loop.",
   "spell.thaumaturge.setting.strength": "Strength",
   "spell.thaumaturge.setting.interval": "Interval",
+  "weaverlib.leap_airborne_vis": "Leap needs %s extra Vis. Land to reset the cost.",
   "weaverlib.eternal_started": "Eternal takes hold.",
   "weaverlib.eternal_halted": "Eternal has stopped.",
   "weaverlib.eternal_interrupted": "Damage interrupted Eternal.",
