@@ -11,6 +11,7 @@ import com.leclowndu93150.thaumaturge.registry.TTDataComponents;
 import dev.weaverlib.WeaverLib;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -35,7 +36,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 public final class Inscriptions {
     public static final int FEE = 150;
-    private static final int CAPACITY = 200;
+    private static final ChargeProfile BATTERY = new ChargeProfile(200, ChargeDisplay.NEVER);
     private static final DeferredRegister.DataComponents COMPONENTS =
         DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, WeaverLib.ID);
     private static final DeferredHolder<DataComponentType<?>, DataComponentType<InscribedSpell>> INSCRIPTION =
@@ -62,14 +63,39 @@ public final class Inscriptions {
     }
 
     public static void bind(ItemStack stack, InscribedSpell inscription) {
-        stack.set(INSCRIPTION, inscription);
-        if (stack.getMaxStackSize() > 1) {
+        boolean addedBattery = !RechargeAccess.isRechargeable(stack);
+        int originalStackSize = stack.getMaxStackSize();
+        stack.set(INSCRIPTION, new InscribedSpell(inscription.id(), inscription.spell(), inscription.words(),
+            inscription.efficient(), Optional.of(addedBattery), Optional.of(originalStackSize)));
+        if (originalStackSize > 1) {
             stack.set(DataComponents.MAX_STACK_SIZE, 1);
         }
-        if (!RechargeAccess.isRechargeable(stack)) {
-            stack.set(TTDataComponents.RECHARGEABLE, new ChargeProfile(CAPACITY, ChargeDisplay.NEVER));
+        if (addedBattery) {
+            stack.set(TTDataComponents.RECHARGEABLE, BATTERY);
             stack.set(TTDataComponents.CHARGE, 0);
         }
+    }
+
+    public static boolean erase(ItemStack stack) {
+        InscribedSpell inscription = get(stack);
+        if (inscription == null || stack.getCount() != 1) {
+            return false;
+        }
+        var defaults = stack.getItem().components();
+        // Older inscriptions did not record which item components they changed.
+        boolean addedBattery = inscription.addedBattery()
+            .orElseGet(() -> !defaults.has(TTDataComponents.RECHARGEABLE.get()));
+        if (addedBattery && BATTERY.equals(RechargeAccess.profile(stack))) {
+            stack.remove(TTDataComponents.RECHARGEABLE);
+            stack.remove(TTDataComponents.CHARGE);
+        }
+        if (stack.getMaxStackSize() == 1) {
+            int originalSize = inscription.originalStackSize()
+                .orElseGet(() -> defaults.getOrDefault(DataComponents.MAX_STACK_SIZE, 1));
+            stack.set(DataComponents.MAX_STACK_SIZE, originalSize);
+        }
+        stack.remove(INSCRIPTION);
+        return true;
     }
 
     public static boolean efficientRecipe(ServerPlayer player, ItemStack stack) {

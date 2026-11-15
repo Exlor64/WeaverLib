@@ -86,7 +86,12 @@ public final class WeaverLib {
         if (beginAttempt(caster, true)) {
             if (words.length == 2) {
                 String[] phrase = words[1].strip().split("(?U)\\s+", 2);
-                if (FocusComponent.spoken(phrase[0]) == FocusComponent.named("inscribe")) {
+                FocusComponent prefix = FocusComponent.spoken(phrase[0]);
+                if (prefix == FocusComponent.named("erase")) {
+                    erase(caster, phrase.length == 1);
+                    return true;
+                }
+                if (prefix == FocusComponent.named("inscribe")) {
                     inscribeWords(caster, phrase.length == 2 ? phrase[1] : "");
                     return true;
                 }
@@ -128,6 +133,10 @@ public final class WeaverLib {
                 }
                 FocusComponent first = FocusComponent.recognize(payload.glyphs().getFirst());
                 if (first != null) {
+                    if (first == FocusComponent.named("erase")) {
+                        erase(player, payload.glyphs().size() == 1 && payload.arguments().getFirst().isEmpty());
+                        return;
+                    }
                     if (first.word().equals("inscribe")) {
                         inscribeRunes(player, payload);
                         return;
@@ -191,6 +200,18 @@ public final class WeaverLib {
         NEXT_ATTEMPT.remove(event.getEntity().getUUID());
         if (event.getEntity() instanceof ServerPlayer player) {
             EternalSpells.clear(player);
+        }
+    }
+
+    private static void erase(ServerPlayer player, boolean standalone) {
+        if (!standalone) {
+            message(player, "erase_layout");
+            return;
+        }
+        if (Inscriptions.erase(player.getMainHandItem())) {
+            message(player, "erase_done");
+        } else {
+            message(player, "erase_empty");
         }
     }
 

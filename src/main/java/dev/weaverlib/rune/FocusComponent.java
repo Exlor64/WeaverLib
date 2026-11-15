@@ -84,6 +84,8 @@ public record FocusComponent(String word, String incantation, SpellPartKind kind
             "49,49 24,16:14,42 3,72:29,76 51,71:72,40 92,16:91,47 92,78:70,75 60,69 49,49");
         addPart(WeaverLib.ID, SpellPartKind.EFFECT, "inscribe", "insculpe",
             "22,77 48,28 76,16 72,44 22,77", "49,57 78,57", "42,72 78,72");
+        addPart(WeaverLib.ID, SpellPartKind.EFFECT, "erase", "dele",
+            "20,75 20,58 61,16 82,37 44,75 20,75", "24,54 45,75", "48,85 86,85");
         addPart(WeaverLib.ID, SpellPartKind.EFFECT, "halt", "siste",
             "28,16 28,82", "64,16 64,82");
     }

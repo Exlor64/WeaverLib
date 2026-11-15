@@ -1,4 +1,4 @@
-# WeaverLib 0.1.18
+# WeaverLib 0.1.19
 
 An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and Java 21. By Ex.
 
@@ -63,3 +63,5 @@ A new battery starts empty and holds **200 Vis**. An item with a native Vis batt
 Right-click with the item in your main hand to cast from its battery. Sneak-right-click to use the item normally. Using the item does not require the Warp unlock. Thaumaturge's normal spell research requirements still apply. A cast costs **1.5×** its normal Vis cost, or **1.2×** if a loaded recipe for that item requires a thaumium or void-metal ingredient. Thaumaturge stores whole Vis charges, so costs round up. Inscribed Eternal pulses and Leap surcharges also draw from that item's battery.
 
 Vanilla map, written-book, and banner copying recipes reject inscribed items so charging one item cannot create multiple batteries.
+
+To clear a stored spell, hold the item in your main hand and draw **Erase** by itself, or say `incant dele`. Erasing requires the Warp unlock and costs no Vis. It removes the battery added by Inscribe and discards any charge in it. An item's existing battery and charge are kept. The item can then be inscribed again.
