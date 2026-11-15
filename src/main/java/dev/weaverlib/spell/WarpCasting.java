@@ -16,18 +16,18 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 
 public final class WarpCasting {
-    public static final int UNFUELED_MULTIPLIER = 3;
+    private static final int RUNE_VIS_MULTIPLIER = 3;
     private static final int TEMPORARY_WARP_LIMIT = 100;
     private static final int CAST_WARP = 1;
     private static final int INSCRIPTION_WARP = 20;
     private static final ResourceLocation VIS_MULTIPLIER =
         ResourceLocation.fromNamespaceAndPath(WeaverLib.ID, "warp_vis_multiplier");
-    private static final ThreadLocal<Cast> UNFUELED_CAST = new ThreadLocal<>();
+    private static final ThreadLocal<Cast> RUNE_CAST = new ThreadLocal<>();
 
     private WarpCasting() {}
 
-    public static boolean hasTemporaryWarp(ServerPlayer player) {
-        return WarpHelper.getWarp(player).get(WarpType.TEMPORARY) > 0;
+    public static float runeVisCost(float normalVis) {
+        return normalVis * RUNE_VIS_MULTIPLIER;
     }
 
     public static void addCastingWarp(ServerPlayer player) {
@@ -52,37 +52,37 @@ public final class WarpCasting {
         return (long) current + gain > TEMPORARY_WARP_LIMIT ? 1 : current + gain;
     }
 
-    public static void execute(ServerPlayer player, ItemStack source, Spell spell, float power, boolean unfueled) {
-        if (!unfueled) {
+    public static void execute(ServerPlayer player, ItemStack source, Spell spell, float power) {
+        if (!source.isEmpty()) {
             SpellEngine.execute(player, source, spell, List.of(SpellTarget.origin(player)), power);
             return;
         }
-        Cast previous = UNFUELED_CAST.get();
-        UNFUELED_CAST.set(new Cast(player, spell));
+        Cast previous = RUNE_CAST.get();
+        RUNE_CAST.set(new Cast(player, spell));
         try {
             SpellEngine.execute(player, source, spell, List.of(SpellTarget.origin(player)), power);
         } finally {
             if (previous == null) {
-                UNFUELED_CAST.remove();
+                RUNE_CAST.remove();
             } else {
-                UNFUELED_CAST.set(previous);
+                RUNE_CAST.set(previous);
             }
         }
     }
 
     public static SpellState tagCost(SpellState state, LivingEntity caster, ItemStack source, Spell spell) {
-        Cast cast = UNFUELED_CAST.get();
+        Cast cast = RUNE_CAST.get();
         if (cast == null || cast.caster() != caster || cast.spell() != spell || !source.isEmpty()) {
             return state;
         }
         // Native carriers and continuations preserve SpellState after the original cast ends.
         var stats = new HashMap<>(state.stats());
-        stats.put(VIS_MULTIPLIER, (float) UNFUELED_MULTIPLIER);
+        stats.put(VIS_MULTIPLIER, (float) RUNE_VIS_MULTIPLIER);
         return new SpellState(stats);
     }
 
     static float continuationCost(SpellState state, float normalVis) {
-        return state.stats().containsKey(VIS_MULTIPLIER) ? normalVis * UNFUELED_MULTIPLIER : normalVis;
+        return state.stats().containsKey(VIS_MULTIPLIER) ? runeVisCost(normalVis) : normalVis;
     }
 
     private record Cast(ServerPlayer caster, Spell spell) {}

@@ -191,7 +191,7 @@ public final class WeaverLib {
         }
         Spell spell = Spell.empty().withRoot(SpellNode.of(Spell.ORIGIN).then(SpellNode.of(halt)));
         var pre = SpellEngine.firePre(player, ItemStack.EMPTY, spell, 1, 0);
-        if (!pre.isCanceled() && payCast(player, ItemStack.EMPTY, 0) != null) {
+        if (!pre.isCanceled() && payCast(player, ItemStack.EMPTY, 0) >= 0) {
             SpellEngine.execute(player, ItemStack.EMPTY, spell,
                 List.of(SpellTarget.entity(player, player.getLookAngle())), 1);
         }
@@ -342,36 +342,33 @@ public final class WeaverLib {
                 || pre.visCost() < 0 || pre.power() <= 0) {
             return;
         }
-        CastPayment payment = payCast(player, source, pre.visCost());
-        if (payment == null) {
+        if (payCast(player, source, pre.visCost()) < 0) {
             return;
         }
 
         int now = player.serverLevel().getServer().getTickCount();
         NEXT_ATTEMPT.put(player.getUUID(), now + Math.max(20, summary.cooldown()));
         CasterManager.setCooldown(player, summary.cooldown());
-        WarpCasting.execute(player, source, spell, pre.power(), payment.unfueled());
+        WarpCasting.execute(player, source, spell, pre.power());
     }
 
-    private record CastPayment(float vis, boolean unfueled) {}
-
-    private static CastPayment payCast(ServerPlayer player, ItemStack source, float normalCost) {
+    // Returns the Vis paid, or a negative value if the payment failed.
+    private static float payCast(ServerPlayer player, ItemStack source, float normalCost) {
         var inscription = Inscriptions.get(source);
         if (inscription == null) {
-            boolean hasWarp = WarpCasting.hasTemporaryWarp(player);
-            float cost = hasWarp ? normalCost : normalCost * WarpCasting.UNFUELED_MULTIPLIER;
+            float cost = WarpCasting.runeVisCost(normalCost);
             if (!payAmbient(player, cost)) {
-                return null;
+                return -1;
             }
             WarpCasting.addCastingWarp(player);
-            return new CastPayment(cost, !hasWarp);
+            return cost;
         }
         int cost = inscription.cost(normalCost);
         if (!RechargeAccess.spendVis(source, cost)) {
             message(player, "inscription_no_vis", cost, RechargeAccess.storedVis(source));
-            return null;
+            return -1;
         }
-        return new CastPayment(cost, false);
+        return cost;
     }
 
     private static boolean payAmbient(ServerPlayer player, float cost) {
@@ -421,8 +418,8 @@ public final class WeaverLib {
 
         int cost = (int) Math.ceil(spell.effect().cost() * (spell.surge() ? 1.5 : 1))
             * targets.size() + (spell.pulse() ? 2 : 0);
-        CastPayment payment = payCast(player, source, cost);
-        if (payment == null) {
+        float paid = payCast(player, source, cost);
+        if (paid < 0) {
             return false;
         }
 
@@ -432,7 +429,7 @@ public final class WeaverLib {
                 case SANA -> target.heal((float) (4 * strength));
             }
         }
-        message(player, "cast", spell.effect().word(), (int) payment.vis());
+        message(player, "cast", spell.effect().word(), (int) paid);
         return true;
     }
 

@@ -1,4 +1,4 @@
-# WeaverLib 0.1.25
+# WeaverLib 0.1.26
 
 An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and Java 21. By Ex.
 
@@ -36,9 +36,9 @@ The geometry matcher is adapted from the MIT-licensed AonDor port kit. See LICEN
 
 ## Temporary Warp and casting costs
 
-A drawn or spoken spell generates **1 Temporary Warp** once its initial Vis payment succeeds. If you start the cast with zero Temporary Warp, it costs **3× Vis**. If you already have Temporary Warp, it costs normal Vis and consumes no Warp. When a WeaverLib Warp gain would take you above **100 Temporary Warp**, you gain **1 Normal Warp** and Temporary Warp resets to **1**, discarding any overflow.
+A drawn or spoken spell generates **1 Temporary Warp** once its initial Vis payment succeeds. Drawn and spoken spells always cost **3× normal Vis**, regardless of how much Temporary Warp you have. When a WeaverLib Warp gain would take you above **100 Temporary Warp**, you gain **1 Normal Warp** and Temporary Warp resets to **1**, discarding any overflow.
 
-Leap surcharges and Eternal upkeep use the Vis multiplier chosen when you cast. Automatic repeats generate no additional Warp. Inscribe generates **20 Temporary Warp** after successfully binding an item and costs **150 Vis**. Item activation uses its own battery pricing, and Erase generates no Warp.
+Leap surcharges and Eternal upkeep for drawn and spoken spells also cost **3× Vis**. Automatic repeats generate no additional Warp. Inscribe generates **20 Temporary Warp** after successfully binding an item and costs **150 Vis**. Item activation uses its own battery pricing, and Erase generates no Warp.
 
 ## Unlocking rune and word casting
 
