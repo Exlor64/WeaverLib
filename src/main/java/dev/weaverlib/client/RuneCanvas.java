@@ -22,8 +22,10 @@ import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.lwjgl.glfw.GLFW;
 
@@ -255,15 +257,21 @@ final class RuneCanvas extends Screen {
                 glyphs.add(List.copyOf(strokes));
                 strokes.clear();
                 editingPart = null;
+                playRuneTurn();
             }
             return true;
         }
         if (key == GLFW.GLFW_KEY_G) {
             int delta = hasShiftDown() ? -1 : 1;
             guide = Math.floorMod(guide + 1 + delta, GUIDES.size() + 1) - 1;
+            playRuneTurn();
             return true;
         }
         return super.keyPressed(key, scanCode, modifiers);
+    }
+
+    private void playRuneTurn() {
+        minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.BOOK_PAGE_TURN, 1.1F, .18F));
     }
 
     private void updateRuneStatus() {
@@ -290,8 +298,8 @@ final class RuneCanvas extends Screen {
             }
         }
         runeStatus = name == null
-            ? Component.translatable("weaverlib.rune_unrecognized", number)
-            : Component.translatable("weaverlib.rune_recognized", number, name);
+            ? Component.translatable("weaverlib.rune_unrecognized", number).withColor(0x842F32)
+            : Component.translatable("weaverlib.rune_recognized", number, name).withColor(0x275647);
     }
 
     private void openArguments() {
@@ -400,10 +408,14 @@ final class RuneCanvas extends Screen {
             activePreview = StrokeInk.preview(activeStroke);
         }
         drawStroke(graphics, activePreview, CAST_INK, x, y, size);
-        drawPageText(graphics, runeStatus == null ? title : runeStatus, x + size / 2, y - 13, size);
+        drawPageText(graphics, title, x + size / 2, y - 13, size);
         drawPageText(graphics, Component.translatable("weaverlib.canvas_cancel"), x + size / 2, y + size + 6, size);
 
         int guideCenter = bookLeft() + bookWidth() * 74 / 100;
+        int guideHeadingY = Math.max(bookTop() + 18, y - 13);
+        if (runeStatus != null) {
+            drawPageText(graphics, runeStatus, guideCenter, guideHeadingY - 11, size);
+        }
         int textY = y + Math.max(0, (size - 92) / 2);
         if (editingPart != null) {
             drawArguments(graphics, guideCenter, textY, size);
@@ -412,7 +424,7 @@ final class RuneCanvas extends Screen {
         Component guideTitle = guide < 0
             ? Component.translatable("weaverlib.guide_off")
             : Component.translatable("weaverlib.guide_active", GUIDES.get(guide).id());
-        drawPageText(graphics, guideTitle, guideCenter, y - 13, size);
+        drawPageText(graphics, guideTitle, guideCenter, guideHeadingY, size);
         if (guide >= 0 && !traceEffect) {
             int preview = Math.max(24, size * 2 / 5);
             drawGuide(graphics, GUIDES.get(guide), guideCenter - preview / 2, y - 1, preview);

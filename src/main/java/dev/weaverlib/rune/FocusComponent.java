@@ -5,6 +5,7 @@ import com.leclowndu93150.thaumaturge.api.spell.part.SpellPartKind;
 import dev.weaverlib.rune.AonDrawing.Point;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -79,6 +80,10 @@ public record FocusComponent(String word, SpellPartKind kind, ResourceKey<SpellP
         .map(FocusComponent::template).toList();
     private static final AonRecognition.OrderedMatcher MATCHER =
         new AonRecognition.OrderedMatcher(recognitionTemplates(), AonRecognition.Tolerance.defaults(.065, .013));
+    private static final AonRecognition.OrderedMatcher BEAM_MATCHER = new AonRecognition.OrderedMatcher(
+        List.of(named("beam").template(), new AonRecognition.Template("beam",
+            List.of(stroke("15,30 79,30"), stroke("15,67 79,67"), stroke("64,18 90,48 64,79")))),
+        AonRecognition.Tolerance.defaults(.065, 0));
 
     public static FocusComponent named(String name) {
         return COMPONENTS.get(name.toLowerCase(Locale.ROOT).replace('-', '_'));
@@ -86,7 +91,36 @@ public record FocusComponent(String word, SpellPartKind kind, ResourceKey<SpellP
 
     public static FocusComponent recognize(List<List<Point>> strokes) {
         var match = MATCHER.recognize(strokes);
-        return match.template() == null ? null : named(match.template().id());
+        if (match.template() != null) {
+            return named(match.template().id());
+        }
+        return !match.ambiguous() && matchesBeam(strokes) ? named("beam") : null;
+    }
+
+    private static boolean matchesBeam(List<List<Point>> strokes) {
+        if (strokes.size() != 3) {
+            return false;
+        }
+        var rails = new ArrayList<List<Point>>(2);
+        List<Point> tip = null;
+        for (var stroke : strokes) {
+            Point start = stroke.getFirst();
+            Point end = stroke.getLast();
+            double dx = end.x() - start.x();
+            double dy = end.y() - start.y();
+            if (Math.abs(dx) > 2 * Math.abs(dy)) {
+                rails.add(dx > 0 ? stroke : stroke.reversed());
+            } else if (tip == null && Math.abs(dy) > 2 * Math.abs(dx)) {
+                tip = dy > 0 ? stroke : stroke.reversed();
+            } else {
+                return false;
+            }
+        }
+        if (rails.size() != 2 || tip == null) {
+            return false;
+        }
+        rails.sort(Comparator.comparingDouble(rail -> (rail.getFirst().y() + rail.getLast().y()) / 2));
+        return BEAM_MATCHER.recognize(List.of(rails.getFirst(), rails.getLast(), tip)).template() != null;
     }
 
     private static List<AonRecognition.Template> recognitionTemplates() {
