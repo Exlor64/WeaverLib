@@ -136,7 +136,47 @@ public record FocusComponent(String word, String incantation, SpellPartKind kind
             return named("beam");
         }
         var outline = OUTLINES.recognize(strokes, .086, .020);
-        return outline.template() == null ? null : named(outline.template().id());
+        if (outline.template() != null) {
+            return named(outline.template().id());
+        }
+        if (!outline.ambiguous() && hasPrimalUnderline(strokes)) {
+            var relaxed = OUTLINES.recognize(strokes, .135, .020);
+            if (relaxed.template() != null && relaxed.template().id().equals("primal")) {
+                return named("primal");
+            }
+        }
+        return null;
+    }
+
+    private static boolean hasPrimalUnderline(List<List<Point>> strokes) {
+        if (strokes.size() != 3) {
+            return false;
+        }
+        var ink = strokes.stream().flatMap(List::stream).toList();
+        double top = ink.stream().mapToDouble(Point::y).min().orElseThrow();
+        double bottom = ink.stream().mapToDouble(Point::y).max().orElseThrow();
+        double height = bottom - top;
+        if (height < .018) {
+            return false;
+        }
+        // In Primal, the two tall overlapping strokes sit above a short, roughly horizontal mark.
+        int tall = 0;
+        int underline = 0;
+        for (var stroke : strokes) {
+            double minY = stroke.stream().mapToDouble(Point::y).min().orElseThrow();
+            double maxY = stroke.stream().mapToDouble(Point::y).max().orElseThrow();
+            if (maxY - minY >= height * .45) {
+                tall++;
+            } else if (minY >= top + height * .72 && maxY - minY <= height * .23) {
+                double minX = stroke.stream().mapToDouble(Point::x).min().orElseThrow();
+                double maxX = stroke.stream().mapToDouble(Point::x).max().orElseThrow();
+                double width = maxX - minX;
+                if (width >= height * .12 && width <= height * .65 && width > maxY - minY) {
+                    underline++;
+                }
+            }
+        }
+        return tall == 2 && underline == 1;
     }
 
     private static boolean matchesBeam(List<List<Point>> strokes) {
