@@ -1,0 +1,39 @@
+plugins {
+    id 'java'
+    id 'net.neoforged.moddev' version '2.0.148'
+}
+
+group = 'dev.weaverlib'
+version = '0.1.0'
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+repositories {
+    mavenCentral()
+    maven { url = "https://api.modrinth.com/maven"; content { includeGroup "maven.modrinth" } }
+    maven { url = "https://maven.theillusivec4.top/"; content { includeGroup "top.theillusivec4.curios" } }
+    maven {
+        url = 'https://www.cursemaven.com'
+        content { includeGroup 'curse.maven' }
+    }
+}
+
+dependencies {
+    implementation 'curse.maven:thaumaturge-1628024:9452543'
+    runtimeOnly 'maven.modrinth:lithostitched:1.8.0-neoforge-21.1'
+    runtimeOnly 'top.theillusivec4.curios:curios-neoforge:9.5.1+1.21.1'
+}
+
+neoForge {
+    version = '21.1.256'
+    runs {
+        client { client() }
+        server { server() }
+    }
+    mods {
+        weaverlib { sourceSet sourceSets.main }
+    }
+}
+
+tasks.named('jar') {
+    from('LICENSE')
+}

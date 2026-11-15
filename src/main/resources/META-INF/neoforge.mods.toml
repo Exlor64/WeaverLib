@@ -1,0 +1,31 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "MIT"
+
+[[mods]]
+modId = "weaverlib"
+version = "0.1.0"
+displayName = "WeaverLib"
+authors = "Ex"
+description = "Shared framework and runtime utilities."
+
+[[dependencies.weaverlib]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.1,1.21.2)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.weaverlib]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1.256,22)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.weaverlib]]
+modId = "thaumaturge"
+type = "required"
+versionRange = "[1.1.0,1.2)"
+ordering = "AFTER"
+side = "BOTH"

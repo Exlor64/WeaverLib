@@ -1,0 +1,11 @@
+{
+  "key.categories.weaverlib": "WeaverLib",
+  "key.weaverlib.canvas": "Open Canvas",
+  "weaverlib.canvas": "Canvas",
+  "weaverlib.canvas_controls": "Enter Cast   Ctrl+Z Undo   G Guide   Esc Close",
+  "weaverlib.unknown_words": "The incantation fades.",
+  "weaverlib.unknown_rune": "The lines fail to bind.",
+  "weaverlib.no_effect": "The spell has no effect here.",
+  "weaverlib.insufficient_vis": "The local aura lacks %s Vis.",
+  "weaverlib.cast": "%s · %s Vis"
+}
