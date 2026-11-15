@@ -1,4 +1,4 @@
-# WeaverLib 0.1.3
+# WeaverLib 0.1.4
 
 An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and Java 21. By Ex.
 
@@ -10,10 +10,10 @@ Run `gradlew.bat build` on Windows or `./gradlew build` on Linux/macOS with a Ja
 
 | Incantation | Effect on the caster | Cost |
 | --- | --- | ---: |
-| `/incant lux` | 60 seconds of night vision | 5 Vis |
-| `/incant sana` | Heals 2 hearts | 8 Vis |
+| `incant lux` | 60 seconds of night vision | 5 Vis |
+| `incant sana` | Heals 2 hearts | 8 Vis |
 
-Word casting takes a typed incantation. Both spells are available to all living, non-spectator players.
+Type incantations in regular chat with no slash. If the first word is `incant` (case-insensitive), only players within 10 blocks in the same dimension receive the message, even if the spell fails. Both spells are available to all living, non-spectator players.
 
 Hold **K** to open the parchment canvas and **G** to cycle the optional rune guides. The numbers mark the start of each stroke.
 

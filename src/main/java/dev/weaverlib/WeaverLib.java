@@ -2,7 +2,6 @@ package dev.weaverlib;
 
 import com.leclowndu93150.thaumaturge.api.aura.AuraHelper;
 import com.leclowndu93150.thaumaturge.api.transaction.Transaction;
-import com.mojang.brigadier.arguments.StringArgumentType;
 import dev.weaverlib.rune.RuneSpell;
 import dev.weaverlib.rune.Weave;
 import java.util.Comparator;
@@ -10,8 +9,10 @@ import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import net.minecraft.commands.Commands;
+import net.minecraft.network.chat.ChatType;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.OutgoingChatMessage;
+import net.minecraft.network.chat.PlayerChatMessage;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -24,7 +25,6 @@ import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
@@ -34,30 +34,36 @@ public final class WeaverLib {
     private static final double GAZE_RANGE = 8;
     private static final double PULSE_RADIUS = 3;
     private static final int MAX_PULSE_TARGETS = 8;
-    private final Map<UUID, Integer> nextAttempt = new HashMap<>();
+    private static final int INCANT_CHAT_RANGE_SQUARED = 100;
+    private static final Map<UUID, Integer> NEXT_ATTEMPT = new HashMap<>();
 
     public WeaverLib(IEventBus modBus) {
         modBus.addListener(this::registerPayloads);
-        NeoForge.EVENT_BUS.addListener(this::registerCommands);
         NeoForge.EVENT_BUS.addListener(this::onLogout);
     }
 
-    private void registerCommands(RegisterCommandsEvent event) {
-        event.getDispatcher().register(Commands.literal("incant")
-            .requires(source -> source.getEntity() instanceof ServerPlayer)
-            .then(Commands.argument("words", StringArgumentType.greedyString())
-                .executes(context -> {
-                    ServerPlayer player = context.getSource().getPlayerOrException();
-                    if (!beginAttempt(player)) {
-                        return 0;
-                    }
-                    Weave spell = Weave.fromWords(StringArgumentType.getString(context, "words"));
-                    if (spell == null) {
-                        message(player, "unknown_words");
-                        return 0;
-                    }
-                    return cast(player, RuneSpell.basic(spell, 1.0)) ? 1 : 0;
-                })));
+    public static boolean handleIncantation(ServerPlayer caster, PlayerChatMessage chat, ChatType.Bound type) {
+        String[] words = chat.signedContent().strip().split("(?U)\\s+", 2);
+        if (!words[0].equalsIgnoreCase("incant")) {
+            return false;
+        }
+
+        OutgoingChatMessage outgoing = OutgoingChatMessage.create(chat);
+        for (ServerPlayer listener : caster.serverLevel().players()) {
+            if (listener.distanceToSqr(caster) <= INCANT_CHAT_RANGE_SQUARED) {
+                listener.sendChatMessage(outgoing, caster.shouldFilterMessageTo(listener), type);
+            }
+        }
+
+        if (beginAttempt(caster)) {
+            Weave spell = words.length == 2 ? Weave.fromWords(words[1]) : null;
+            if (spell == null) {
+                message(caster, "unknown_words");
+            } else {
+                cast(caster, RuneSpell.basic(spell, 1.0));
+            }
+        }
+        return true;
     }
 
     private void registerPayloads(RegisterPayloadHandlersEvent event) {
@@ -76,20 +82,20 @@ public final class WeaverLib {
     }
 
     private void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
-        nextAttempt.remove(event.getEntity().getUUID());
+        NEXT_ATTEMPT.remove(event.getEntity().getUUID());
     }
 
-    private boolean beginAttempt(ServerPlayer player) {
+    private static boolean beginAttempt(ServerPlayer player) {
         int now = player.serverLevel().getServer().getTickCount();
-        Integer until = nextAttempt.get(player.getUUID());
+        Integer until = NEXT_ATTEMPT.get(player.getUUID());
         if (!player.isAlive() || player.isSpectator() || (until != null && now - until < 0)) {
             return false;
         }
-        nextAttempt.put(player.getUUID(), now + 20);
+        NEXT_ATTEMPT.put(player.getUUID(), now + 20);
         return true;
     }
 
-    private boolean cast(ServerPlayer player, RuneSpell spell) {
+    private static boolean cast(ServerPlayer player, RuneSpell spell) {
         LivingEntity anchor = spell.gaze() ? gazeTarget(player) : player;
         if (anchor == null) {
             message(player, "no_target");
