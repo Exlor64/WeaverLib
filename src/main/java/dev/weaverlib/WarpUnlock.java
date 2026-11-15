@@ -7,6 +7,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.serialization.Codec;
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -29,6 +30,14 @@ final class WarpUnlock {
     private static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> UNLOCKED =
         ATTACHMENTS.register("warp_casting_unlocked",
             () -> AttachmentType.builder(() -> false).serialize(Codec.BOOL).copyOnDeath().build());
+
+    // The action bar is one line wide, so show the two sentences in sequence.
+    private static final int REVELATION_LINE_TICKS = 55;
+    private record Revelation(int showAt, boolean closingLine) {}
+
+    private static final DeferredHolder<AttachmentType<?>, AttachmentType<Revelation>> REVELATION =
+        ATTACHMENTS.register("warp_revelation",
+            () -> AttachmentType.builder(() -> new Revelation(0, false)).build());
 
     private static final SimpleCommandExceptionType BAD_ACTION =
         new SimpleCommandExceptionType(Component.translatable("weaverlib.warp_bad_action"));
@@ -84,6 +93,7 @@ final class WarpUnlock {
             default -> throw BAD_ACTION.create();
         };
         target.setData(UNLOCKED, unlocked);
+        target.removeData(REVELATION);
         target.sendSystemMessage(Component.translatable(unlocked
             ? "weaverlib.warp_unlocked" : "weaverlib.warp_manual_lock"));
         if (source.getEntity() != target) {
@@ -94,9 +104,29 @@ final class WarpUnlock {
     }
 
     private static void onPlayerTick(PlayerTickEvent.Post event) {
-        if (event.getEntity() instanceof ServerPlayer player && player.isAlive()
-                && !player.isSpectator() && player.tickCount % 20 == 0) {
-            check(player, false);
+        if (event.getEntity() instanceof ServerPlayer player && player.isAlive() && !player.isSpectator()) {
+            if (player.tickCount % 20 == 0) {
+                check(player, false);
+            }
+            showRevelation(player);
+        }
+    }
+
+    private static void showRevelation(ServerPlayer player) {
+        if (!player.hasData(REVELATION)) {
+            return;
+        }
+        Revelation line = player.getData(REVELATION);
+        if (player.tickCount - line.showAt() < 0) {
+            return;
+        }
+        if (line.closingLine()) {
+            var weave = Component.translatable("weaverlib.warp_revelation_weave").withStyle(ChatFormatting.ITALIC);
+            player.displayClientMessage(Component.translatable("weaverlib.warp_revelation_pull", weave), true);
+            player.removeData(REVELATION);
+        } else {
+            player.displayClientMessage(Component.translatable("weaverlib.warp_revelation_change"), true);
+            player.setData(REVELATION, new Revelation(player.tickCount + REVELATION_LINE_TICKS, true));
         }
     }
 
@@ -118,7 +148,7 @@ final class WarpUnlock {
         long current = (long) warp.get(WarpType.NORMAL) + warp.get(WarpType.PERMANENT);
         if (current >= required) {
             player.setData(UNLOCKED, true);
-            player.sendSystemMessage(Component.translatable("weaverlib.warp_unlocked"));
+            player.setData(REVELATION, new Revelation(player.tickCount + 1, false));
             return true;
         }
         if (showProgress) {

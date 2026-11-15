@@ -1,4 +1,4 @@
-# WeaverLib 0.1.11
+# WeaverLib 0.1.12
 
 An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and Java 21. By Ex.
 
@@ -28,7 +28,7 @@ The geometry matcher is adapted from the MIT-licensed AonDor port kit. See LICEN
 
 ## Unlocking rune and word casting
 
-Reach **50 combined Normal and Permanent Warp** to unlock both casting methods. Temporary Warp and bonuses from equipment do not count. The unlock is saved to the player and survives death, reconnecting, and purification. A locked casting attempt displays your current progress without spending Vis.
+Reach **50 combined Normal and Permanent Warp** to unlock both casting methods. Temporary Warp and bonuses from equipment do not count. The unlock is saved to the player and survives death, reconnecting, and purification. On a natural unlock, a two-part message appears above the hotbar. A locked casting attempt displays your current progress without spending Vis.
 
 The server config entry `requiredWarp` in `weaverlib-server.toml` controls the threshold. Set it to `0` to disable the Warp requirement. Changing the threshold affects players who have yet to earn the unlock.
 
