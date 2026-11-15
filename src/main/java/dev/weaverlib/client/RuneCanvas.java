@@ -71,6 +71,10 @@ final class RuneCanvas extends Screen {
         guide = new RuneGuide(guidePath, GUIDES);
     }
 
+    void setAllRunes(boolean allRunes) {
+        guide.setAllRunes(allRunes);
+    }
+
     void setCanvasKey(InputConstants.Key canvasKey) {
         this.canvasKey = canvasKey;
         drawButton = canvasKey.equals(InputConstants.Type.MOUSE.getOrCreate(GLFW.GLFW_MOUSE_BUTTON_LEFT))

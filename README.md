@@ -1,4 +1,4 @@
-# WeaverLib 0.1.22
+# WeaverLib 0.1.23
 
 An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and Java 21. By Ex.
 
@@ -7,6 +7,8 @@ An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and
 Run `gradlew.bat build` on Windows or `./gradlew build` on Linux/macOS with a Java 21 JDK. Install the JAR from `build/libs` on the server and each client alongside [Thaumaturge 1.1.0 for NeoForge 1.21.1](https://www.curseforge.com/minecraft/mc-mods/thaumaturge/files/9452543), Curios, and Lithostitched. Gradle downloads the pinned development dependencies. For development launches, use `gradlew.bat runClient` or `gradlew.bat runServer` with Java 21.
 
 ## Rune guide
+
+The canvas key requires the same Warp unlock as rune casting. Operators can use `/weaverrunes unlockall` for themselves or `/weaverrunes unlockall <player>` for one online player. The grant is saved on that server and reveals every rune in the guide. Canvas access still follows the Warp unlock.
 
 Draw a rune freehand and finish it with **Tab** or release the canvas key. A recognized rune is saved in your guide for this Minecraft profile on this installation. Open the guide with **G** and scroll through learned runes.
 

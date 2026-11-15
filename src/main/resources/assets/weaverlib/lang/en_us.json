@@ -9,6 +9,8 @@
   "weaverlib.argument_target": "Expected a Target or Null rune.",
   "weaverlib.argument_power": "Expected a Power or Null rune.",
   "weaverlib.no_target": "Your gaze finds no valid target.",
+  "weaverlib.runes_all_unlocked": "Every rune is available in your guide.",
+  "weaverlib.runes_all_unlocked_for": "Unlocked every rune for %s.",
   "weaverlib.guide_empty": "No runes learned",
   "weaverlib.canvas_guide_learn": "Draw a rune, then press Tab",
   "weaverlib.guide_place_right": "Right drag · Place rune",

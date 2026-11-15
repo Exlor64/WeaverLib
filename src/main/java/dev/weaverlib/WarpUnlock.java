@@ -11,6 +11,9 @@ import dev.weaverlib.spell.EternalSpells;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.IEventBus;
@@ -20,17 +23,26 @@ import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
-final class WarpUnlock {
+public final class WarpUnlock {
     private static final DeferredRegister<AttachmentType<?>> ATTACHMENTS =
         DeferredRegister.create(NeoForgeRegistries.Keys.ATTACHMENT_TYPES, WeaverLib.ID);
     private static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> UNLOCKED =
         ATTACHMENTS.register("warp_casting_unlocked",
             () -> AttachmentType.builder(() -> false).serialize(Codec.BOOL).copyOnDeath().build());
+
+    private static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> CANVAS_ACCESS =
+        ATTACHMENTS.register("canvas_access", () -> AttachmentType.builder(() -> false)
+            .sync((holder, player) -> holder == player, ByteBufCodecs.BOOL).build());
+    private static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> ALL_RUNES =
+        ATTACHMENTS.register("all_runes_unlocked", () -> AttachmentType.builder(() -> false)
+            .serialize(Codec.BOOL).copyOnDeath()
+            .sync((holder, player) -> holder == player, ByteBufCodecs.BOOL).build());
 
     // The action bar is one line wide, so show the two sentences in sequence.
     private static final int REVELATION_LINE_TICKS = 55;
@@ -62,10 +74,46 @@ final class WarpUnlock {
         ATTACHMENTS.register(modBus);
         container.registerConfig(ModConfig.Type.SERVER, CONFIG);
         NeoForge.EVENT_BUS.addListener(WarpUnlock::onPlayerTick);
+        NeoForge.EVENT_BUS.addListener(WarpUnlock::onLogin);
+        NeoForge.EVENT_BUS.addListener(WarpUnlock::onRespawn);
         NeoForge.EVENT_BUS.addListener(WarpUnlock::registerCommand);
     }
 
+    public static boolean canOpenCanvas(Player player) {
+        return player.getExistingData(CANVAS_ACCESS).orElse(false);
+    }
+
+    public static boolean hasAllRunes(Player player) {
+        return player.getExistingData(ALL_RUNES).orElse(false);
+    }
+
+    private static void syncCanvasAccess(ServerPlayer player) {
+        boolean unlocked = check(player, false);
+        if (canOpenCanvas(player) != unlocked) {
+            player.setData(CANVAS_ACCESS, unlocked);
+        }
+    }
+
+    private static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            syncCanvasAccess(player);
+        }
+    }
+
+    private static void onRespawn(PlayerEvent.PlayerRespawnEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            syncCanvasAccess(player);
+        }
+    }
+
     private static void registerCommand(RegisterCommandsEvent event) {
+        event.getDispatcher().register(Commands.literal("weaverrunes")
+            .requires(source -> source.hasPermission(2))
+            .then(Commands.literal("unlockall")
+                .executes(context -> revealRunes(context.getSource(), context.getSource().getPlayerOrException()))
+                .then(Commands.argument("player", EntityArgument.player())
+                    .executes(context -> revealRunes(context.getSource(), EntityArgument.getPlayer(context, "player"))))));
+
         event.getDispatcher().register(Commands.literal("weaverwarp")
             .requires(source -> source.hasPermission(2))
             .then(Commands.argument("action", StringArgumentType.word())
@@ -86,6 +134,16 @@ final class WarpUnlock {
                     }))));
     }
 
+    private static int revealRunes(CommandSourceStack source, ServerPlayer target) {
+        target.setData(ALL_RUNES, true);
+        target.sendSystemMessage(Component.translatable("weaverlib.runes_all_unlocked"));
+        if (source.getEntity() != target) {
+            source.sendSuccess(() -> Component.translatable("weaverlib.runes_all_unlocked_for",
+                target.getDisplayName()), false);
+        }
+        return 1;
+    }
+
     private static int setAccess(CommandSourceStack source, ServerPlayer target, String action)
             throws CommandSyntaxException {
         boolean unlocked = switch (action) {
@@ -94,6 +152,7 @@ final class WarpUnlock {
             default -> throw BAD_ACTION.create();
         };
         target.setData(UNLOCKED, unlocked);
+        syncCanvasAccess(target);
         if (!unlocked) {
             EternalSpells.clear(target);
         }
@@ -110,7 +169,7 @@ final class WarpUnlock {
     private static void onPlayerTick(PlayerTickEvent.Post event) {
         if (event.getEntity() instanceof ServerPlayer player && player.isAlive() && !player.isSpectator()) {
             if (player.tickCount % 20 == 0) {
-                check(player, false);
+                syncCanvasAccess(player);
             }
             showRevelation(player);
         }

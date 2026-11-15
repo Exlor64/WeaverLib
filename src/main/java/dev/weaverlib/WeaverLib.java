@@ -119,7 +119,7 @@ public final class WeaverLib {
     }
 
     private void registerPayloads(RegisterPayloadHandlersEvent event) {
-        var registrar = event.registrar("5");
+        var registrar = event.registrar("6");
         registrar.playToServer(CastInscription.TYPE, CastInscription.CODEC, (payload, context) -> {
             if (context.player() instanceof ServerPlayer player) {
                 castInscription(player, payload.inscriptionId());

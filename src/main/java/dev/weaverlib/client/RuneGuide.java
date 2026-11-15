@@ -14,6 +14,7 @@ final class RuneGuide {
     private final List<Template> catalog;
     private final List<Template> learned = new ArrayList<>();
     private int selected;
+    private boolean allRunes;
 
     RuneGuide(Path path, List<Template> catalog) {
         this.path = path;
@@ -28,13 +29,27 @@ final class RuneGuide {
     }
 
     Template selected() {
-        return learned.isEmpty() ? null : learned.get(selected);
+        var visible = visible();
+        return visible.isEmpty() ? null : visible.get(selected);
     }
 
     void browse(int direction) {
-        if (!learned.isEmpty()) {
-            selected = Math.floorMod(selected + direction, learned.size());
+        int count = visible().size();
+        if (count > 0) {
+            selected = Math.floorMod(selected + direction, count);
         }
+    }
+
+    void setAllRunes(boolean allRunes) {
+        if (this.allRunes != allRunes) {
+            Template previous = selected();
+            this.allRunes = allRunes;
+            selected = previous == null ? 0 : Math.max(0, visible().indexOf(previous));
+        }
+    }
+
+    private List<Template> visible() {
+        return allRunes ? catalog : learned;
     }
 
     void learn(String id) {

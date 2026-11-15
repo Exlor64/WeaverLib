@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.leclowndu93150.thaumaturge.content.aura.BlockRechargePedestal;
 import dev.weaverlib.CastInscription;
 import dev.weaverlib.WeaverLib;
+import dev.weaverlib.WarpUnlock;
 import dev.weaverlib.spell.Inscriptions;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -63,13 +64,23 @@ public final class WeaverClient {
 
     private void tick(ClientTickEvent.Post event) {
         Minecraft client = Minecraft.getInstance();
+        boolean canOpen = client.player != null && client.player.isAlive() && !client.player.isSpectator()
+            && WarpUnlock.canOpenCanvas(client.player);
+        if (canvas != null && client.screen == canvas) {
+            if (!canOpen) {
+                client.setScreen(null);
+            } else {
+                canvas.setAllRunes(WarpUnlock.hasAllRunes(client.player));
+            }
+        }
         while (scribing.consumeClick()) {
-            if (scribing.isDown() && client.isWindowActive() && client.player != null
+            if (canOpen && scribing.isDown() && client.isWindowActive()
                     && client.level != null && client.screen == null) {
                 if (canvas == null) {
                     canvas = new RuneCanvas(client.gameDirectory.toPath().resolve("weaverlib")
                         .resolve("rune-guides").resolve(client.player.getUUID() + ".txt"));
                 }
+                canvas.setAllRunes(WarpUnlock.hasAllRunes(client.player));
                 canvas.setCanvasKey(scribing.getKey());
                 client.setScreen(canvas);
             }
