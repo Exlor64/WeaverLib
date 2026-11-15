@@ -60,6 +60,6 @@ Inscribe requires the Warp unlock and costs **150 Vis** from the local aura. It 
 
 A new battery starts empty and holds **200 Vis**. An item with a native Vis battery keeps its existing charge and capacity. Charge it with Thaumaturge's **Recharge Pedestal** or **Vis Amulet**. Right-click the pedestal to place the item on it. Inscribed items do not refill directly from ambient Vis while held.
 
-Right-click with the item in your main hand to cast from its battery. Sneak-right-click to use the item normally. Anyone holding the item can activate it. A cast costs **1.5×** its normal Vis cost, or **1.2×** if a loaded recipe for that item requires a thaumium or void-metal ingredient. Thaumaturge stores whole Vis charges, so costs round up. Inscribed Eternal pulses and Leap surcharges also draw from that item's battery.
+Right-click with the item in your main hand to cast from its battery. Sneak-right-click to use the item normally. Using the item does not require the Warp unlock. Thaumaturge's normal spell research requirements still apply. A cast costs **1.5×** its normal Vis cost, or **1.2×** if a loaded recipe for that item requires a thaumium or void-metal ingredient. Thaumaturge stores whole Vis charges, so costs round up. Inscribed Eternal pulses and Leap surcharges also draw from that item's battery.
 
 Vanilla map, written-book, and banner copying recipes reject inscribed items so charging one item cannot create multiple batteries.
