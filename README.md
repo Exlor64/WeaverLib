@@ -1,4 +1,4 @@
-# WeaverLib 0.1.27
+# WeaverLib 0.1.28
 
 An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and Java 21. By Ex.
 
@@ -42,7 +42,7 @@ Leap surcharges and Eternal upkeep for drawn and spoken spells also cost **3× V
 
 ## Unlocking rune and word casting
 
-Reach **50 combined Normal and Permanent Warp** to unlock both casting methods. Temporary Warp and bonuses from equipment do not count. The unlock is saved to the player and survives death, reconnecting, and purification. On a natural unlock, a two-part message appears above the hotbar. A locked casting attempt displays your current progress without spending Vis.
+Reach **50 combined Normal and Permanent Warp** or become a **Goety lich** to unlock both casting methods. Existing liches qualify when they next join or tick on the server. An explicit operator lock takes priority. Temporary Warp and bonuses from equipment do not count. The unlock is saved to the player and survives death, reconnecting, and purification. On a natural unlock, a two-part message appears above the hotbar. A locked casting attempt displays your current progress without spending Vis.
 
 The server config entry `requiredWarp` in `weaverlib-server.toml` controls the threshold. Set it to `0` to disable the Warp requirement. Changing the threshold affects players who have yet to earn the unlock.
 

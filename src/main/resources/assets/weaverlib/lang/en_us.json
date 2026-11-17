@@ -31,6 +31,7 @@
   "weaverlib.canvas_guide_scroll": "G · Hide guide | Scroll · Browse",
   "weaverlib.canvas_undo": "Ctrl+Z · Undo",
   "weaverlib.canvas_cancel": "Esc · Clear & close",
+  "weaverlib.lich_revelation_change": "Lichdom changes how you sense the weave…",
   "weaverlib.warp_revelation_change": "The warp changes you in ways you can't comprehend...",
   "weaverlib.warp_revelation_pull": "You feel the pull to create... to combine... to %s.",
   "weaverlib.warp_revelation_weave": "weave",

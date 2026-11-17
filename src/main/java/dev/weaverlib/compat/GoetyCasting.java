@@ -8,6 +8,7 @@ import com.Polarice3.Goety.common.events.spell.GoetyEventFactory;
 import com.Polarice3.Goety.common.items.magic.DarkWand;
 import com.Polarice3.Goety.common.magic.spells.necromancy.SkeletonSpell;
 import com.Polarice3.Goety.utils.SEHelper;
+import com.Polarice3.Goety.utils.LichdomHelper;
 import com.Polarice3.Goety.utils.TotemFinder;
 import com.Polarice3.Goety.utils.WandUtil;
 import com.Vivideru.Goety.common.magic.SpellTypeDamage;
@@ -43,6 +44,10 @@ public final class GoetyCasting {
         NeoForge.EVENT_BUS.addListener(GoetyCasting::tick);
         NeoForge.EVENT_BUS.addListener(GoetyCasting::onDamage);
         NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, GoetyCasting::restoreFromEnergy);
+    }
+
+    public static boolean isLich(ServerPlayer player) {
+        return LichdomHelper.isLich(player);
     }
 
     public static void start(ServerPlayer player) {

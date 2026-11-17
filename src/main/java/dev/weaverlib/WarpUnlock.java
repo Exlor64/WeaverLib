@@ -8,6 +8,7 @@ import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.serialization.Codec;
 import dev.weaverlib.spell.EternalSpells;
+import dev.weaverlib.compat.GoetyCasting;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -46,11 +47,11 @@ public final class WarpUnlock {
 
     // The action bar is one line wide, so show the two sentences in sequence.
     private static final int REVELATION_LINE_TICKS = 55;
-    private record Revelation(int showAt, boolean closingLine) {}
+    private record Revelation(int showAt, boolean closingLine, boolean lich) {}
 
     private static final DeferredHolder<AttachmentType<?>, AttachmentType<Revelation>> REVELATION =
         ATTACHMENTS.register("warp_revelation",
-            () -> AttachmentType.builder(() -> new Revelation(0, false)).build());
+            () -> AttachmentType.builder(() -> new Revelation(0, false, false)).build());
 
     private static final SimpleCommandExceptionType BAD_ACTION =
         new SimpleCommandExceptionType(Component.translatable("weaverlib.warp_bad_action"));
@@ -63,6 +64,7 @@ public final class WarpUnlock {
         var builder = new ModConfigSpec.Builder();
         REQUIRED_WARP = builder.comment(
             "Normal plus Permanent Thaumaturge Warp required to permanently learn rune and word casting.",
+            "Goety lichdom also unlocks casting when Goety is installed.",
             "Set to 0 to allow casting without earning the unlock."
         ).defineInRange("requiredWarp", 50, 0, Integer.MAX_VALUE);
         CONFIG = builder.build();
@@ -188,8 +190,9 @@ public final class WarpUnlock {
             player.displayClientMessage(Component.translatable("weaverlib.warp_revelation_pull", weave), true);
             player.removeData(REVELATION);
         } else {
-            player.displayClientMessage(Component.translatable("weaverlib.warp_revelation_change"), true);
-            player.setData(REVELATION, new Revelation(player.tickCount + REVELATION_LINE_TICKS, true));
+            player.displayClientMessage(Component.translatable(line.lich()
+                ? "weaverlib.lich_revelation_change" : "weaverlib.warp_revelation_change"), true);
+            player.setData(REVELATION, new Revelation(player.tickCount + REVELATION_LINE_TICKS, true, line.lich()));
         }
     }
 
@@ -203,6 +206,9 @@ public final class WarpUnlock {
             }
             return unlocked;
         }
+        if (WeaverLib.hasGoety() && GoetyCasting.isLich(player)) {
+            return grantNaturalUnlock(player, true);
+        }
         if (required == 0) {
             return true;
         }
@@ -210,13 +216,17 @@ public final class WarpUnlock {
         var warp = WarpHelper.getWarp(player);
         long current = (long) warp.get(WarpType.NORMAL) + warp.get(WarpType.PERMANENT);
         if (current >= required) {
-            player.setData(UNLOCKED, true);
-            player.setData(REVELATION, new Revelation(player.tickCount + 1, false));
-            return true;
+            return grantNaturalUnlock(player, false);
         }
         if (showProgress) {
             player.displayClientMessage(Component.translatable("weaverlib.warp_locked", current, required), true);
         }
         return false;
     }
+    private static boolean grantNaturalUnlock(ServerPlayer player, boolean lich) {
+        player.setData(UNLOCKED, true);
+        player.setData(REVELATION, new Revelation(player.tickCount + 1, false, lich));
+        return true;
+    }
+
 }
