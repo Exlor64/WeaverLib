@@ -38,9 +38,9 @@ final class RuneCanvas extends Screen {
         ResourceLocation.fromNamespaceAndPath("thaumaturge", "textures/gui/gui_researchbook.png");
     private static final int ATLAS_SIZE = 512;
     private static final int SPREAD_HEIGHT = 360;
-    private static final int PAGE_TEXT = 0xFF492C21;
-    private static final int GUIDE_INK = 0xFFAA8469;
-    private static final int CAST_INK = 0xFFA01FDB;
+    private static final int PAGE_TEXT = 0xFFF7E5CD;
+    private static final int GUIDE_INK = 0xFFC6A486;
+    private static final int CAST_INK = 0xFFDA64FF;
     private static final int MAX_CAPTURE_POINTS = 512;
     private static final int RETAINED_CAPTURE_POINTS = 384;
     private static final List<Template> GUIDES = Stream.concat(
@@ -387,8 +387,8 @@ final class RuneCanvas extends Screen {
         int number = glyphs.size() + (strokes.isEmpty() ? 0 : 1);
         String name = recognizedName(recognitionInk(latest), number);
         runeStatus = name == null
-            ? Component.translatable("weaverlib.rune_unrecognized", number).withColor(0x842F32)
-            : Component.translatable("weaverlib.rune_recognized", number, name).withColor(0x275647);
+            ? Component.translatable("weaverlib.rune_unrecognized", number).withColor(0xFFFFA6A6)
+            : Component.translatable("weaverlib.rune_recognized", number, name).withColor(0xFFA1E5BE);
     }
 
     private String recognizedName(List<List<Point>> ink, int number) {
@@ -488,12 +488,14 @@ final class RuneCanvas extends Screen {
         int y = top();
         int size = size();
         graphics.fill(0, 0, width, height, 0xA018111D);
+        graphics.setColor(0.34F, 0.29F, 0.34F, 1.0F);
         graphics.blit(BOOK, bookLeft(), bookTop(), bookWidth(), bookHeight(), 0, 0,
             ATLAS_SIZE, SPREAD_HEIGHT, ATLAS_SIZE, ATLAS_SIZE);
+        graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
 
         for (int index = 0; index <= 10; index++) {
             int offset = index * size / 10;
-            int rule = index == 0 || index == 10 ? 0xA06F4934 : 0x446F4934;
+            int rule = index == 0 || index == 10 ? 0xA0C0A28F : 0x44C0A28F;
             graphics.hLine(x, x + size, y + offset, rule);
             graphics.vLine(x + offset, y, y + size, rule);
         }
