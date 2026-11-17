@@ -30,7 +30,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 public final class Sol {
     private static final String DATA_KEY = "weaverlib:sol";
-    private static final int MAX_RESERVE = 100;
+    public static final int MAX_RESERVE = 100;
     private static final int DROP_ODDS = 100;
     private static final WarpType[] BURN_ORDER = {WarpType.TEMPORARY, WarpType.NORMAL, WarpType.PERMANENT};
     private static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(WeaverLib.ID);
@@ -42,6 +42,7 @@ public final class Sol {
 
     public static void register(IEventBus modBus) {
         ITEMS.register(modBus);
+        SolCombat.register(modBus);
         NeoForge.EVENT_BUS.addListener(Sol::dropSunStone);
         NeoForge.EVENT_BUS.addListener(Sol::tick);
         NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, Sol::penalizeThaumaturge);
@@ -74,6 +75,7 @@ public final class Sol {
             return;
         }
 
+        SolCombat.tick(player);
         CompoundTag data = data(player);
         if (player.getY() < player.level().getMinBuildHeight() - 64 && !data.getBoolean("CanRelinquish")) {
             data.putBoolean("CanRelinquish", true);
@@ -99,7 +101,7 @@ public final class Sol {
         if (reserve < MAX_RESERVE) {
             int charged = reserve + 1;
             data.putInt("Reserve", charged);
-            player.displayClientMessage(Component.translatable("weaverlib.sol.reserve", charged, MAX_RESERVE), true);
+            SolCombat.refresh(player);
             player.serverLevel().sendParticles(ParticleTypes.WAX_ON, player.getX(), player.getY() + 1.2,
                 player.getZ(), 3, 0.3, 0.3, 0.3, 0.0);
         }
@@ -113,9 +115,24 @@ public final class Sol {
     static void unlock(ServerPlayer player) {
         data(player).putBoolean("Unlocked", true);
         EternalSpells.halt(player);
+        SolCombat.refresh(player);
         player.displayClientMessage(Component.translatable("weaverlib.sol.unlocked"), true);
         player.serverLevel().sendParticles(ParticleTypes.WAX_ON, player.getX(), player.getY() + 1.2,
             player.getZ(), 24, 0.45, 0.55, 0.45, 0.0);
+    }
+
+    static int reserve(ServerPlayer player) {
+        return Math.clamp(data(player).getInt("Reserve"), 0, MAX_RESERVE);
+    }
+
+    static boolean spend(ServerPlayer player, int cost) {
+        int current = reserve(player);
+        if (current < cost) {
+            return false;
+        }
+        data(player).putInt("Reserve", current - cost);
+        SolCombat.refresh(player);
+        return true;
     }
 
     public static float visCost(ServerPlayer player, float normalVis) {
@@ -145,6 +162,7 @@ public final class Sol {
         }
 
         player.getPersistentData().getCompound(Player.PERSISTED_NBT_TAG).remove(DATA_KEY);
+        SolCombat.reset(player);
         player.sendSystemMessage(Component.translatable("weaverlib.sol.relinquished"));
         return 1;
     }

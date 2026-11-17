@@ -1,4 +1,4 @@
-# WeaverLib 0.1.32
+# WeaverLib 0.1.33
 
 An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and Java 21. By Ex.
 
@@ -11,6 +11,8 @@ Gravel broken by a player under direct daylight has a 1% chance to drop a Sun St
 
 Sol suppresses drawn and spoken weaving. Thaumaturge uses five times the usual Vis and half casting power. Goety spell potency is halved and rounded down. Entering the void grants access to `/sol relinquish`, which removes Sol and its reserve. The option persists after respawn.
 
+
+Unlocked players have wings whose color moves from dim gray through gold to white with their Sol reserve. Press **V** to cycle **Off → Ranged → Melee → Off**. In Ranged mode, **Z** calls a sky beam onto a target under the open sky (32 Sol), **X** brings the hands together and releases a wide beam after a short windup (24 Sol), and **B** throws a traveling light lance (12 Sol). Melee mode spreads the wings for future wing attacks. All four keys can be rebound.
 
 ## Rune guide
 

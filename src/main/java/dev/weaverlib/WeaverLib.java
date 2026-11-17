@@ -21,6 +21,9 @@ import com.leclowndu93150.thaumaturge.api.items.RechargeAccess;
 import com.leclowndu93150.thaumaturge.api.spell.SpellSummary;
 import com.mojang.datafixers.util.Either;
 import dev.weaverlib.sol.Sol;
+import dev.weaverlib.sol.SolAction;
+import dev.weaverlib.sol.SolCombat;
+import dev.weaverlib.sol.SolFlash;
 import dev.weaverlib.spell.EternalSpells;
 import dev.weaverlib.spell.InscribedSpell;
 import dev.weaverlib.spell.Inscriptions;
@@ -186,7 +189,13 @@ public final class WeaverLib {
     }
 
     private void registerPayloads(RegisterPayloadHandlersEvent event) {
-        var registrar = event.registrar("8");
+        var registrar = event.registrar("9");
+        registrar.playToServer(SolAction.TYPE, SolAction.CODEC, (action, context) -> {
+            if (context.player() instanceof ServerPlayer player) {
+                SolCombat.handle(player, action);
+            }
+        });
+        registrar.playToClient(SolFlash.TYPE, SolFlash.CODEC, (flash, context) -> flash.receive());
         registrar.playToServer(CastInscription.TYPE, CastInscription.CODEC, (payload, context) -> {
             if (context.player() instanceof ServerPlayer player) {
                 castInscription(player, payload.inscriptionId());
