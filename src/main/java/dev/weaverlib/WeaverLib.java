@@ -20,6 +20,7 @@ import dev.weaverlib.rune.Weave;
 import com.leclowndu93150.thaumaturge.api.items.RechargeAccess;
 import com.leclowndu93150.thaumaturge.api.spell.SpellSummary;
 import com.mojang.datafixers.util.Either;
+import dev.weaverlib.sol.Sol;
 import dev.weaverlib.spell.EternalSpells;
 import dev.weaverlib.spell.InscribedSpell;
 import dev.weaverlib.spell.Inscriptions;
@@ -66,6 +67,7 @@ public final class WeaverLib {
         WarpUnlock.register(modBus, container);
         WeaverParts.register(modBus);
         Inscriptions.register(modBus);
+        Sol.register(modBus);
         if (hasGoety()) {
             SoulIntegrity.register(modBus);
             GoetyCasting.register(modBus);
@@ -102,7 +104,8 @@ public final class WeaverLib {
             if (words.length != 2 || !isRealIncantation(caster, words[1])) {
                 return false;
             }
-            caster.sendSystemMessage(Component.translatable("weaverlib.incant_locked"));
+            caster.sendSystemMessage(Component.translatable(Sol.unlocked(caster)
+                ? "weaverlib.sol.weaving_blocked" : "weaverlib.incant_locked"));
             return true;
         }
 
@@ -478,7 +481,7 @@ public final class WeaverLib {
             return false;
         }
 
-        double strength = spell.potency() * (spell.surge() ? 1.5 : 1);
+        double strength = spell.potency() * (spell.surge() ? 1.5 : 1) * Sol.potency(player);
         int duration = (int) (1200 * strength);
         List<LivingEntity> targets;
         if (spell.pulse()) {
@@ -500,7 +503,7 @@ public final class WeaverLib {
 
         int cost = (int) Math.ceil(spell.effect().cost() * (spell.surge() ? 1.5 : 1))
             * targets.size() + (spell.pulse() ? 2 : 0);
-        float paid = payCast(player, source, cost);
+        float paid = payCast(player, source, Sol.visCost(player, cost));
         if (paid < 0) {
             return false;
         }

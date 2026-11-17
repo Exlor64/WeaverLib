@@ -1,10 +1,16 @@
-# WeaverLib 0.1.31
+# WeaverLib 0.1.32
 
 An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and Java 21. By Ex.
 
 ## Build and install
 
 Run `gradlew.bat build` on Windows or `./gradlew build` on Linux/macOS with a Java 21 JDK. Install the JAR from `build/libs` on the server and each client alongside [Thaumaturge 1.1.0 for NeoForge 1.21.1](https://www.curseforge.com/minecraft/mc-mods/thaumaturge/files/9452543), Curios, and Lithostitched. Gradle downloads the pinned development dependencies. For development launches, use `gradlew.bat runClient` or `gradlew.bat runServer` with Java 21.
+## Sol
+
+Gravel broken by a player under direct daylight has a 1% chance to drop a Sun Stone. Hold use to eat it and unlock Sol. In direct daylight, Sol burns off one point of Warp per second, starting with temporary Warp, then normal and permanent Warp. After that, sunlight restores one Sol per second, up to 100.
+
+Sol suppresses drawn and spoken weaving. Thaumaturge uses five times the usual Vis and half casting power. Goety spell potency is halved and rounded down. Entering the void grants access to `/sol relinquish`, which removes Sol and its reserve. The option persists after respawn.
+
 
 ## Rune guide
 

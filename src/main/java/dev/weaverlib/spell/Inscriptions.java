@@ -9,6 +9,7 @@ import com.leclowndu93150.thaumaturge.content.infusion.InfusionRecipe;
 import com.leclowndu93150.thaumaturge.content.recipe.crucible.CrucibleRecipe;
 import com.leclowndu93150.thaumaturge.registry.TTDataComponents;
 import dev.weaverlib.WeaverLib;
+import dev.weaverlib.sol.Sol;
 import dev.weaverlib.compat.CurioInscriptions;
 import java.util.Arrays;
 import java.util.List;
@@ -167,14 +168,14 @@ public final class Inscriptions {
         for (int i = 0; i < inventory.getContainerSize(); i++) {
             ItemStack stack = inventory.getItem(i);
             if (matchesInscription(stack, id)) {
-                return RechargeAccess.spendVis(stack, get(stack).cost(normalVis));
+                return RechargeAccess.spendVis(stack, get(stack).cost(Sol.visCost(caster, normalVis)));
             }
         }
         if (!WeaverLib.hasCurios()) {
             return false;
         }
         ItemStack curio = CurioInscriptions.find(caster, stack -> matchesInscription(stack, id));
-        return !curio.isEmpty() && RechargeAccess.spendVis(curio, get(curio).cost(normalVis));
+        return !curio.isEmpty() && RechargeAccess.spendVis(curio, get(curio).cost(Sol.visCost(caster, normalVis)));
     }
 
     private static void addTooltip(ItemTooltipEvent event) {

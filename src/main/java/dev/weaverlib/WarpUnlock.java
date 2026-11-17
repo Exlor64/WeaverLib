@@ -1,6 +1,7 @@
 package dev.weaverlib;
 
 import com.leclowndu93150.thaumaturge.api.warp.WarpHelper;
+import dev.weaverlib.sol.Sol;
 import com.leclowndu93150.thaumaturge.api.warp.WarpType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -197,6 +198,12 @@ public final class WarpUnlock {
     }
 
     public static boolean check(ServerPlayer player, boolean showProgress) {
+        if (Sol.unlocked(player)) {
+            if (showProgress) {
+                player.displayClientMessage(Component.translatable("weaverlib.sol.weaving_blocked"), true);
+            }
+            return false;
+        }
         int required = REQUIRED_WARP.get();
         // An absent attachment means natural progression. Stored false means an explicit operator lock.
         if (player.hasData(UNLOCKED)) {

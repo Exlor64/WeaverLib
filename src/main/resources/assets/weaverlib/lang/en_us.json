@@ -1,4 +1,13 @@
 {
+  "item.weaverlib.sun_stone": "Sun Stone",
+  "weaverlib.sol.unlocked": "Warmth spreads through you. You can now gather Sol.",
+  "weaverlib.sol.already_unlocked": "You can already gather Sol.",
+  "weaverlib.sol.reserve": "Sol %s / %s",
+  "weaverlib.sol.weaving_blocked": "Sol silences your weaving.",
+  "weaverlib.sol.burning_warp": "Sunlight burns away your Warp.",
+  "weaverlib.sol.void_choice": "The void loosens Sol's hold on you. Use /sol relinquish to give up Sol.",
+  "weaverlib.sol.no_void_choice": "Enter the void while wielding Sol to gain the option to relinquish it.",
+  "weaverlib.sol.relinquished": "The warmth of Sol leaves you.",
   "key.categories.weaverlib": "WeaverLib",
   "key.weaverlib.cast_curio": "Cast Inscribed Curio",
   "key.weaverlib.canvas": "Hold Canvas",
