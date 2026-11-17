@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'dev.weaverlib'
-version = '0.1.26'
+version = '0.1.27'
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
 repositories {
@@ -19,6 +19,7 @@ repositories {
 
 dependencies {
     implementation 'curse.maven:thaumaturge-1628024:9452543'
+    compileOnly "curse.maven:goety-586095:9207885"
     runtimeOnly 'maven.modrinth:lithostitched:1.8.0-neoforge-21.1'
     runtimeOnly 'top.theillusivec4.curios:curios-neoforge:9.5.1+1.21.1'
 }

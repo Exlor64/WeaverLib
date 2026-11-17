@@ -102,6 +102,9 @@ public final class FocusSpell {
             if (component == FocusComponent.named("erase")) {
                 throw invalid("erase_layout");
             }
+            if (component == FocusComponent.named("osseous")) {
+                throw invalid("goety_standalone");
+            }
             SpellPart part = Spells.part(registries, component.key())
                 .filter(found -> !found.hidden() && found.kind() == component.kind())
                 .orElseThrow(() -> invalid("focus_unavailable"));

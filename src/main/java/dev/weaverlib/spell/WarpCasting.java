@@ -38,7 +38,7 @@ public final class WarpCasting {
         addTemporaryWarp(player, INSCRIPTION_WARP);
     }
 
-    private static void addTemporaryWarp(ServerPlayer player, int gain) {
+    public static void addTemporaryWarp(ServerPlayer player, int gain) {
         int current = WarpHelper.getWarp(player).get(WarpType.TEMPORARY);
         int total = temporaryWarpAfterGain(current, gain);
         WarpHelper.addWarp(player, total - current, WarpType.TEMPORARY);

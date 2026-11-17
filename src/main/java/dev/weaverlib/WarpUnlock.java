@@ -193,7 +193,7 @@ public final class WarpUnlock {
         }
     }
 
-    static boolean check(ServerPlayer player, boolean showProgress) {
+    public static boolean check(ServerPlayer player, boolean showProgress) {
         int required = REQUIRED_WARP.get();
         // An absent attachment means natural progression. Stored false means an explicit operator lock.
         if (player.hasData(UNLOCKED)) {

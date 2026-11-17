@@ -31,6 +31,12 @@ public final class WeaverClient {
 
     public WeaverClient(IEventBus modBus) {
         modBus.addListener(this::registerKeys);
+        if (WeaverLib.hasGoety()) {
+            SoulVision vision = new SoulVision();
+            modBus.addListener(vision::registerReload);
+            NeoForge.EVENT_BUS.addListener(vision::render);
+            NeoForge.EVENT_BUS.addListener(vision::logout);
+        }
         NeoForge.EVENT_BUS.addListener(this::tick);
         NeoForge.EVENT_BUS.addListener(this::useInscription);
         NeoForge.EVENT_BUS.addListener(this::onLogout);

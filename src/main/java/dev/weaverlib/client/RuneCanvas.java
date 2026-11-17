@@ -3,6 +3,7 @@ package dev.weaverlib.client;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.math.Axis;
 import dev.weaverlib.RuneCast;
+import dev.weaverlib.WeaverLib;
 import dev.weaverlib.rune.AonDrawing;
 import dev.weaverlib.rune.AonDrawing.Point;
 import dev.weaverlib.rune.Weave;
@@ -68,7 +69,8 @@ final class RuneCanvas extends Screen {
 
     RuneCanvas(Path guidePath) {
         super(Component.translatable("weaverlib.canvas"));
-        guide = new RuneGuide(guidePath, GUIDES);
+        guide = new RuneGuide(guidePath, WeaverLib.hasGoety() ? GUIDES
+            : GUIDES.stream().filter(template -> !template.id().equals("osseous")).toList());
     }
 
     void setAllRunes(boolean allRunes) {

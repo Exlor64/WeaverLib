@@ -1,4 +1,4 @@
-# WeaverLib 0.1.26
+# WeaverLib 0.1.27
 
 An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and Java 21. By Ex.
 
@@ -79,3 +79,11 @@ Right-click with the item in your main hand to cast from its battery. Sneak-righ
 Vanilla map, written-book, and banner copying recipes reject inscribed items so charging one item cannot create multiple batteries.
 
 To clear a stored spell, hold the item in your main hand and draw **Erase** by itself, or say `incant dele`. Erasing requires the Warp unlock and costs no Vis. It removes the battery added by Inscribe and discards any charge in it. An item's existing battery and charge are kept. The item can then be inscribed again.
+
+## Optional Goety casting
+
+With Goety 3.2.x installed on the client and server, hold a Goety wand or staff with an Osseous Focus equipped. Say `incant goety osseous` or draw the **Osseous** rune by itself. The rune traces a diagonal bone in one continuous stroke. Goety casts use their own focus, casting time, cooldown, summon rules and resource costs. Goety and Thaumaturge components cannot share an incantation, rune cast or inscription.
+
+Goety's stored Soul Energy pays first. Each missing unit takes one percentage point of personal soul. For example, an eight-energy cast with three stored spends those three and leaves a full-soul player at **95%**. The cast is blocked if the total cost would leave less than **1%**. Spending personal soul generates Temporary Warp at an increasing rate as the reserve drops, rising by one Warp per point spent for each 20 percentage points missing. The existing condensation threshold applies.
+
+Personal soul scales maximum health, attack damage, movement speed, attack speed and world color saturation. It recovers by **one percentage point every 30 seconds of active play**. Goety Soul Energy gains repair the personal reserve first and deposit the remainder in native storage. Recovery restores your health cap and leaves current health at its existing value.

@@ -11,6 +11,8 @@ import com.leclowndu93150.thaumaturge.api.spell.Spells;
 import com.leclowndu93150.thaumaturge.api.spell.cast.SpellTarget;
 import com.leclowndu93150.thaumaturge.content.casters.CasterManager;
 import com.leclowndu93150.thaumaturge.content.spell.engine.SpellEngine;
+import dev.weaverlib.compat.GoetyCasting;
+import dev.weaverlib.compat.SoulIntegrity;
 import dev.weaverlib.rune.FocusComponent;
 import dev.weaverlib.rune.FocusSpell;
 import dev.weaverlib.rune.RuneSpell;
@@ -44,6 +46,7 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -63,8 +66,26 @@ public final class WeaverLib {
         WarpUnlock.register(modBus, container);
         WeaverParts.register(modBus);
         Inscriptions.register(modBus);
+        if (hasGoety()) {
+            SoulIntegrity.register(modBus);
+            GoetyCasting.register(modBus);
+        }
         modBus.addListener(this::registerPayloads);
         NeoForge.EVENT_BUS.addListener(this::onLogout);
+    }
+
+    public static boolean hasGoety() {
+        return ModList.get().isLoaded("goety");
+    }
+
+    private static void castGoety(ServerPlayer caster, boolean standalone) {
+        if (!hasGoety()) {
+            message(caster, "goety_missing");
+        } else if (!standalone) {
+            message(caster, "goety_standalone");
+        } else {
+            GoetyCasting.start(caster);
+        }
     }
 
     public static boolean handleIncantation(ServerPlayer caster, PlayerChatMessage chat, ChatType.Bound type) {
@@ -87,6 +108,10 @@ public final class WeaverLib {
         if (beginAttempt(caster, true)) {
             if (words.length == 2) {
                 String[] phrase = words[1].strip().split("(?U)\\s+", 2);
+                if (phrase[0].equalsIgnoreCase("goety")) {
+                    castGoety(caster, phrase.length == 2 && phrase[1].equalsIgnoreCase("osseous"));
+                    return true;
+                }
                 FocusComponent prefix = FocusComponent.spoken(phrase[0]);
                 if (prefix == FocusComponent.named("erase")) {
                     erase(caster, phrase.length == 1);
@@ -117,7 +142,7 @@ public final class WeaverLib {
     }
 
     private void registerPayloads(RegisterPayloadHandlersEvent event) {
-        var registrar = event.registrar("6");
+        var registrar = event.registrar("7");
         registrar.playToServer(CastInscription.TYPE, CastInscription.CODEC, (payload, context) -> {
             if (context.player() instanceof ServerPlayer player) {
                 castInscription(player, payload.inscriptionId());
@@ -134,6 +159,10 @@ public final class WeaverLib {
                 }
                 FocusComponent first = FocusComponent.recognize(payload.glyphs().getFirst());
                 if (first != null) {
+                    if (first == FocusComponent.named("osseous")) {
+                        castGoety(player, payload.glyphs().size() == 1 && payload.arguments().getFirst().isEmpty());
+                        return;
+                    }
                     if (first == FocusComponent.named("erase")) {
                         erase(player, payload.glyphs().size() == 1 && payload.arguments().getFirst().isEmpty());
                         return;
