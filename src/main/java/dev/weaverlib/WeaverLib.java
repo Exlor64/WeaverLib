@@ -94,6 +94,14 @@ public final class WeaverLib {
             return false;
         }
 
+        if (!WarpUnlock.check(caster, false)) {
+            if (words.length != 2 || !isRealIncantation(caster, words[1])) {
+                return false;
+            }
+            caster.sendSystemMessage(Component.translatable("weaverlib.incant_locked"));
+            return true;
+        }
+
         OutgoingChatMessage outgoing = OutgoingChatMessage.create(chat);
         for (ServerPlayer listener : caster.serverLevel().players()) {
             if (listener.distanceToSqr(caster) <= INCANT_CHAT_RANGE_SQUARED) {
@@ -105,7 +113,7 @@ public final class WeaverLib {
             castHalt(caster);
             return true;
         }
-        if (beginAttempt(caster, true)) {
+        if (beginAttempt(caster, false)) {
             if (words.length == 2) {
                 String[] phrase = words[1].strip().split("(?U)\\s+", 2);
                 if (phrase[0].equalsIgnoreCase("goety")) {
@@ -139,6 +147,35 @@ public final class WeaverLib {
             }
         }
         return true;
+    }
+
+    private static boolean isRealIncantation(ServerPlayer caster, String words) {
+        String[] phrase = words.strip().split("(?U)\\s+", 2);
+        if (phrase[0].equalsIgnoreCase("goety")) {
+            return hasGoety() && phrase.length == 2 && phrase[1].equalsIgnoreCase("osseous");
+        }
+        FocusComponent prefix = FocusComponent.spoken(phrase[0]);
+        if (prefix == FocusComponent.named("erase")) {
+            return phrase.length == 1;
+        }
+        if (prefix == FocusComponent.named("halt") && phrase.length == 1) {
+            return true;
+        }
+        if (prefix == FocusComponent.named("inscribe")) {
+            if (phrase.length != 2) {
+                return false;
+            }
+            words = phrase[1];
+        }
+        if (Weave.fromWords(words) != null) {
+            return true;
+        }
+        try {
+            FocusSpell.fromWords(words, caster.registryAccess());
+            return true;
+        } catch (IllegalArgumentException invalidSpell) {
+            return false;
+        }
     }
 
     private void registerPayloads(RegisterPayloadHandlersEvent event) {

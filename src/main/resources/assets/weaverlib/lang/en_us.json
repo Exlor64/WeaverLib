@@ -42,6 +42,7 @@
   "weaverlib.warp_player_offline": "No online player named %s.",
   "weaverlib.warp_command_unlocked": "Rune and word casting unlocked for %s.",
   "weaverlib.warp_command_locked": "Rune and word casting locked for %s.",
+  "weaverlib.incant_locked": "The words die on your lips- you suddenly forget what you were going to say.",
   "weaverlib.warp_locked": "Rune and word casting is locked. Normal + Permanent Warp: %s/%s.",
   "weaverlib.unknown_words": "The incantation fades.",
   "weaverlib.rune_recognized": "Rune %s · %s",

@@ -1,4 +1,4 @@
-# WeaverLib 0.1.28
+# WeaverLib 0.1.29
 
 An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and Java 21. By Ex.
 
@@ -21,7 +21,7 @@ Right-click the canvas to center a copy of the selected rune at the pointer. Dra
 | `incant lux` | 60 seconds of night vision | 5 Vis |
 | `incant sana` | Heals 2 hearts | 8 Vis |
 
-Type incantations in regular chat with no slash. If the first word is `incant` (case-insensitive), only players within 10 blocks in the same dimension receive the message, even if the spell fails. Casting is available to living, non-spectator players who have earned the Warp unlock.
+Type incantations in regular chat with no slash. If the first word is `incant` (case-insensitive), only players within 10 blocks in the same dimension receive the message, even if the spell fails. Casting is available to living, non-spectator players who have earned the Warp unlock. A locked player who types a valid incantation gets a private chat message, and the attempted incantation is suppressed.
 
 Hold **K** to open the parchment canvas. Press **G** to show or hide the rune guide, then scroll to browse. The numbers mark the start of each stroke. The right page shows the latest rune match, and a quiet page-turn sound plays when you press Tab to finish a rune, toggle the guide, or scroll to another guide.
 
@@ -42,7 +42,7 @@ Leap surcharges and Eternal upkeep for drawn and spoken spells also cost **3× V
 
 ## Unlocking rune and word casting
 
-Reach **50 combined Normal and Permanent Warp** or become a **Goety lich** to unlock both casting methods. Existing liches qualify when they next join or tick on the server. An explicit operator lock takes priority. Temporary Warp and bonuses from equipment do not count. The unlock is saved to the player and survives death, reconnecting, and purification. On a natural unlock, a two-part message appears above the hotbar. A locked casting attempt displays your current progress without spending Vis.
+Reach **50 combined Normal and Permanent Warp** or become a **Goety lich** to unlock both casting methods. Existing liches qualify when they next join or tick on the server. An explicit operator lock takes priority. Temporary Warp and bonuses from equipment do not count. The unlock is saved to the player and survives death, reconnecting, and purification. On a natural unlock, a two-part message appears above the hotbar. A locked rune attempt reports your current progress without spending Vis.
 
 The server config entry `requiredWarp` in `weaverlib-server.toml` controls the threshold. Set it to `0` to disable the Warp requirement. Changing the threshold affects players who have yet to earn the unlock.
 
