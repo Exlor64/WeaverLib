@@ -74,6 +74,10 @@ public final class WeaverLib {
         NeoForge.EVENT_BUS.addListener(this::onLogout);
     }
 
+    public static boolean hasCurios() {
+        return ModList.get().isLoaded("curios");
+    }
+
     public static boolean hasGoety() {
         return ModList.get().isLoaded("goety");
     }
@@ -179,10 +183,16 @@ public final class WeaverLib {
     }
 
     private void registerPayloads(RegisterPayloadHandlersEvent event) {
-        var registrar = event.registrar("7");
+        var registrar = event.registrar("8");
         registrar.playToServer(CastInscription.TYPE, CastInscription.CODEC, (payload, context) -> {
             if (context.player() instanceof ServerPlayer player) {
                 castInscription(player, payload.inscriptionId());
+            }
+        });
+        registrar.playToServer(CastCurioInscription.TYPE, CastCurioInscription.CODEC, (payload, context) -> {
+            if (context.player() instanceof ServerPlayer player) {
+                ItemStack stack = Inscriptions.firstInscribedCurio(player);
+                castInscription(player, stack);
             }
         });
         registrar.playToServer(RuneCast.TYPE, RuneCast.CODEC, (payload, context) -> {
@@ -352,8 +362,14 @@ public final class WeaverLib {
     private static void castInscription(ServerPlayer player, UUID id) {
         ItemStack stack = player.getMainHandItem();
         var inscription = Inscriptions.get(stack);
-        if (player.isShiftKeyDown() || inscription == null || !id.equals(inscription.id()) || stack.getCount() != 1
-                || !beginAttempt(player, false)) {
+        if (!player.isShiftKeyDown() && inscription != null && id.equals(inscription.id())) {
+            castInscription(player, stack);
+        }
+    }
+
+    private static void castInscription(ServerPlayer player, ItemStack stack) {
+        var inscription = Inscriptions.get(stack);
+        if (inscription == null || stack.getCount() != 1 || !beginAttempt(player, false)) {
             return;
         }
         inscription.spell().ifLeft(spell -> castFocus(player, spell, stack))

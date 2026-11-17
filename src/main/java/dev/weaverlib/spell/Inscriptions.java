@@ -9,6 +9,7 @@ import com.leclowndu93150.thaumaturge.content.infusion.InfusionRecipe;
 import com.leclowndu93150.thaumaturge.content.recipe.crucible.CrucibleRecipe;
 import com.leclowndu93150.thaumaturge.registry.TTDataComponents;
 import dev.weaverlib.WeaverLib;
+import dev.weaverlib.compat.CurioInscriptions;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -152,16 +153,28 @@ public final class Inscriptions {
         return bits;
     }
 
+    public static ItemStack firstInscribedCurio(ServerPlayer player) {
+        return WeaverLib.hasCurios() ? CurioInscriptions.find(player, stack -> get(stack) != null) : ItemStack.EMPTY;
+    }
+
+    private static boolean matchesInscription(ItemStack stack, UUID id) {
+        var inscription = get(stack);
+        return stack.getCount() == 1 && inscription != null && id.equals(inscription.id());
+    }
+
     public static boolean payContinuation(ServerPlayer caster, UUID id, float normalVis) {
         var inventory = caster.getInventory();
         for (int i = 0; i < inventory.getContainerSize(); i++) {
             ItemStack stack = inventory.getItem(i);
-            InscribedSpell inscription = get(stack);
-            if (inscription != null && id.equals(inscription.id()) && stack.getCount() == 1) {
-                return RechargeAccess.spendVis(stack, inscription.cost(normalVis));
+            if (matchesInscription(stack, id)) {
+                return RechargeAccess.spendVis(stack, get(stack).cost(normalVis));
             }
         }
-        return false;
+        if (!WeaverLib.hasCurios()) {
+            return false;
+        }
+        ItemStack curio = CurioInscriptions.find(caster, stack -> matchesInscription(stack, id));
+        return !curio.isEmpty() && RechargeAccess.spendVis(curio, get(curio).cost(normalVis));
     }
 
     private static void addTooltip(ItemTooltipEvent event) {

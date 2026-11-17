@@ -3,6 +3,7 @@ package dev.weaverlib.client;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.leclowndu93150.thaumaturge.content.aura.BlockRechargePedestal;
 import dev.weaverlib.CastInscription;
+import dev.weaverlib.CastCurioInscription;
 import dev.weaverlib.WeaverLib;
 import dev.weaverlib.WarpUnlock;
 import dev.weaverlib.spell.Inscriptions;
@@ -27,6 +28,10 @@ public final class WeaverClient {
         new KeyMapping("key.weaverlib.canvas", InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_K, "key.categories.weaverlib");
 
+    private final KeyMapping castCurio =
+        new KeyMapping("key.weaverlib.cast_curio", InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_J, "key.categories.weaverlib");
+
     private RuneCanvas canvas;
 
     public WeaverClient(IEventBus modBus) {
@@ -44,6 +49,9 @@ public final class WeaverClient {
 
     private void registerKeys(RegisterKeyMappingsEvent event) {
         event.register(scribing);
+        if (WeaverLib.hasCurios()) {
+            event.register(castCurio);
+        }
     }
 
     private void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
@@ -70,6 +78,12 @@ public final class WeaverClient {
 
     private void tick(ClientTickEvent.Post event) {
         Minecraft client = Minecraft.getInstance();
+        while (castCurio.consumeClick()) {
+            if (client.player != null && client.player.isAlive() && !client.player.isSpectator()
+                    && client.isWindowActive() && client.screen == null && client.getConnection() != null) {
+                PacketDistributor.sendToServer(CastCurioInscription.INSTANCE);
+            }
+        }
         boolean canOpen = client.player != null && client.player.isAlive() && !client.player.isSpectator()
             && WarpUnlock.canOpenCanvas(client.player);
         if (canvas != null && client.screen == canvas) {
