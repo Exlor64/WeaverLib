@@ -33,7 +33,7 @@ public enum RuneModifier {
 
     private static final List<AonRecognition.Template> TEMPLATES =
         Arrays.stream(values()).map(RuneModifier::template).toList();
-    private static final AonRecognition.Tolerance TOLERANCE = AonRecognition.Tolerance.defaults(.13, .025);
+    private static final AonRecognition.Tolerance TOLERANCE = AonRecognition.Tolerance.defaults(.15, .022);
     private static final AonRecognition.Template WIDE_PULSE = new AonRecognition.Template("pulse", List.of(
         List.of(new Point(.12, .61), new Point(.29, .61), new Point(.44, .25),
             new Point(.58, .76), new Point(.74, .46), new Point(.88, .46))
@@ -56,9 +56,13 @@ public enum RuneModifier {
     }
 
     public static RuneModifier recognize(List<List<Point>> strokes) {
-        var match = AonRecognition.assess(strokes, TEMPLATES, TOLERANCE, .075, .028);
+        var match = AonRecognition.assess(strokes, TEMPLATES, TOLERANCE, .092, .024);
         if (match.template() != null) {
-            return valueOf(match.template().id().toUpperCase(Locale.ROOT));
+            RuneModifier modifier = valueOf(match.template().id().toUpperCase(Locale.ROOT));
+            // Keep the original ordered Pulse tolerance so a bare zigzag still needs the lead-in and tail.
+            if (modifier != PULSE || match.error() <= .13) {
+                return modifier;
+            }
         }
         // Pulse has a steep rise and fall that is easy to round or split when drawn by hand.
         if (!match.ambiguous() && strokes.size() <= 2) {

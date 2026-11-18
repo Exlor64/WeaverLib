@@ -1,4 +1,4 @@
-# WeaverLib 0.1.34
+# WeaverLib 0.1.35
 
 An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and Java 21. By Ex.
 
@@ -31,7 +31,7 @@ Right-click the canvas to center a copy of the selected rune at the pointer. Dra
 
 Type incantations in regular chat with no slash. If the first word is `incant` (case-insensitive), only players within 10 blocks in the same dimension receive the message, even if the spell fails. Casting is available to living, non-spectator players who have earned the Warp unlock. A locked player who types a valid incantation gets a private chat message, and the attempted incantation is suppressed.
 
-Hold **K** to open the parchment canvas. Press **G** to show or hide the rune guide, then scroll to browse. The numbers mark the start of each stroke. The right page shows the latest rune match, and a quiet page-turn sound plays when you press Tab to finish a rune, toggle the guide, or scroll to another guide.
+Hold **K** to open the parchment canvas. Press **G** to show or hide the rune guide, then scroll to browse. The numbers mark the start of each stroke and the arrows show its direction. The right page shows the latest rune match, and a quiet page-turn sound plays when you press Tab to finish a rune, toggle the guide, or scroll to another guide.
 
 - **Lux** uses a V drawn from upper left, down, then up to the right. Draw the crossbar left to right.
 - **Sana** starts with a rising, kinked stem that turns right at the top. From the middle of the stem, draw a short branch toward the lower right. Finish with a detached clockwise ring, starting at the top.
@@ -68,7 +68,7 @@ Draw the main effect near the center. Press **Tab** between complete runes to ma
 
 **Null** skips one slot and uses its default. Trailing slots can be omitted. For example, draw Lux in the center, Null above it, and Gaze to its right to give another player night vision. For stronger self-healing, draw Sana with Null, Null, Surge in clockwise order.
 
-To cast Pulse, draw Lux or Sana first and press **Tab**. Draw a small heartbeat line above it with a short lead-in, a sharp rise and dip, and a rise halfway back into a short tail. Pulse goes in the Form slot, so it comes before Gaze and Surge.
+To cast Pulse, draw Lux or Sana first and press **Tab**. Draw a small heartbeat line above it with a short lead-in, a sharp rise and dip, and a rise halfway back into a short tail. Pulse goes in the Form slot. Place Gaze and Surge clockwise after it. A rune placed just to either side of twelve o’clock still starts the clockwise order.
 
 Lux affects players. Sana can heal living targets. Pulse charges per affected target plus 2 Vis. A malformed spell, missing target, or insufficient Vis leaves the aura unspent. Typed incantations use the effect's defaults.
 

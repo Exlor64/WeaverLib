@@ -7,6 +7,7 @@ public final class AonDrawing {
     public static final int MAX_GLYPHS = 8;
     public static final int MAX_STROKES = 16;
     public static final int MAX_POINTS = 48;
+    private static final double TOP_SLOT_TOLERANCE = Math.toRadians(5);
 
     private AonDrawing() {}
 
@@ -21,6 +22,9 @@ public final class AonDrawing {
     // AonDor orders children clockwise from twelve o'clock around their parent's ink bounds.
     static double clockwiseAngle(Point center, Point point) {
         double angle = Math.atan2(point.x() - center.x(), center.y() - point.y());
+        if (Math.abs(angle) <= TOP_SLOT_TOLERANCE) {
+            return 0;
+        }
         return angle < 0 ? angle + Math.TAU : angle;
     }
 

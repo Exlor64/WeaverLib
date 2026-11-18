@@ -97,12 +97,14 @@ public record FocusComponent(String word, String incantation, SpellPartKind kind
 
     public static final List<AonRecognition.Template> TEMPLATES = COMPONENTS.values().stream()
         .map(FocusComponent::template).toList();
+    private static final AonRecognition.OrderedMatcher GUIDE_MATCHER =
+        new AonRecognition.OrderedMatcher(outlineTemplates(), AonRecognition.Tolerance.defaults(.014, .004));
     private static final AonRecognition.OrderedMatcher MATCHER =
-        new AonRecognition.OrderedMatcher(recognitionTemplates(), AonRecognition.Tolerance.defaults(.088, .017));
+        new AonRecognition.OrderedMatcher(recognitionTemplates(), AonRecognition.Tolerance.defaults(.105, .017));
     private static final AonRecognition.OrderedMatcher BEAM_MATCHER = new AonRecognition.OrderedMatcher(
         List.of(named("beam").template(), new AonRecognition.Template("beam",
             List.of(stroke("15,30 79,30"), stroke("15,67 79,67"), stroke("64,18 90,48 64,79")))),
-        AonRecognition.Tolerance.defaults(.065, 0));
+        AonRecognition.Tolerance.defaults(.078, 0));
 
     private static final AonRecognition.OutlineMatcher OUTLINES =
         new AonRecognition.OutlineMatcher(outlineTemplates());
@@ -130,14 +132,20 @@ public record FocusComponent(String word, String incantation, SpellPartKind kind
     }
 
     public static FocusComponent recognize(List<List<Point>> strokes) {
+        // Placed runes are uniform copies of their templates, up to network rounding.
+        var guide = GUIDE_MATCHER.recognize(strokes);
+        if (guide.template() != null) {
+            return named(guide.template().id());
+        }
         var match = MATCHER.recognize(strokes);
-        if (match.template() != null) {
+        if (match.template() != null && (match.error() <= .088
+                || AonRecognition.shapeError(strokes, match.template(), .01) <= .16)) {
             return named(match.template().id());
         }
         if (!match.ambiguous() && matchesBeam(strokes)) {
             return named("beam");
         }
-        var outline = OUTLINES.recognize(strokes, .086, .020);
+        var outline = OUTLINES.recognize(strokes, .089, .020);
         if (outline.template() != null) {
             return named(outline.template().id());
         }

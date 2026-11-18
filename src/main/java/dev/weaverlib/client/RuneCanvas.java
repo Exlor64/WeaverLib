@@ -6,6 +6,7 @@ import dev.weaverlib.RuneCast;
 import dev.weaverlib.WeaverLib;
 import dev.weaverlib.rune.AonDrawing;
 import dev.weaverlib.rune.AonDrawing.Point;
+import dev.weaverlib.rune.AonRecognition;
 import dev.weaverlib.rune.Weave;
 import dev.weaverlib.rune.FocusComponent;
 import dev.weaverlib.rune.FocusSpell;
@@ -40,6 +41,7 @@ final class RuneCanvas extends Screen {
     private static final int SPREAD_HEIGHT = 360;
     private static final int PAGE_TEXT = 0xFFF7E5CD;
     private static final int GUIDE_INK = 0xFFC6A486;
+    private static final int GUIDE_ARROW_INK = 0xCCFFE3AD;
     private static final int CAST_INK = 0xFFDA64FF;
     private static final int MAX_CAPTURE_POINTS = 512;
     private static final int RETAINED_CAPTURE_POINTS = 384;
@@ -385,12 +387,7 @@ final class RuneCanvas extends Screen {
         }
         var latest = strokes.isEmpty() ? glyphs.getLast() : strokes;
         int number = glyphs.size() + (strokes.isEmpty() ? 0 : 1);
-        var ink = recognitionInk(latest);
-        String name = recognizedName(ink, number);
-        if (name == null && RuneModifier.recognize(ink) == RuneModifier.PULSE) {
-            runeStatus = Component.translatable("weaverlib.pulse_needs_base").withColor(0xFFFFE4A5);
-            return;
-        }
+        String name = recognizedName(recognitionInk(latest), number);
         runeStatus = name == null
             ? Component.translatable("weaverlib.rune_unrecognized", number).withColor(0xFFFFA6A6)
             : Component.translatable("weaverlib.rune_recognized", number, name).withColor(0xFFA1E5BE);
@@ -412,10 +409,12 @@ final class RuneCanvas extends Screen {
         }
         if (number == effectIndex + 1) {
             var effect = Weave.recognize(ink);
-            return effect.template() == null ? null : effect.template().id();
+            if (effect.template() != null) {
+                return effect.template().id();
+            }
         }
         RuneModifier modifier = RuneModifier.recognize(ink);
-        return modifier == RuneModifier.NULL ? modifier.template().id() : null;
+        return modifier == null ? null : modifier.template().id();
     }
 
     private void openArguments() {
@@ -573,11 +572,28 @@ final class RuneCanvas extends Screen {
         for (int index = 0; index < template.strokes().size(); index++) {
             var stroke = template.strokes().get(index);
             drawStroke(graphics, stroke, GUIDE_INK, x, y, side);
+            drawGuideArrow(graphics, stroke, x, y, side);
             Point start = stroke.getFirst();
             graphics.drawString(font, Integer.toString(index + 1),
                 x + (int) (start.x() * side) - 6, y + (int) (start.y() * side) - 7,
                 PAGE_TEXT, false);
         }
+    }
+
+    private void drawGuideArrow(GuiGraphics graphics, List<Point> stroke, int x, int y, int side) {
+        var samples = AonRecognition.resample(stroke, 9);
+        Point before = samples.get(3);
+        Point tip = samples.get(4);
+        double direction = Math.atan2(tip.y() - before.y(), tip.x() - before.x());
+        int length = Math.clamp(side / 24, 2, 5);
+        var pose = graphics.pose();
+        pose.pushPose();
+        pose.translate(x + tip.x() * side, y + tip.y() * side, 0);
+        pose.mulPose(Axis.ZP.rotation((float) direction - .62F));
+        graphics.fill(-length, 0, 1, 1, GUIDE_ARROW_INK);
+        pose.mulPose(Axis.ZP.rotation(1.24F));
+        graphics.fill(-length, 0, 1, 1, GUIDE_ARROW_INK);
+        pose.popPose();
     }
 
     private void drawPageText(GuiGraphics graphics, Component text, int center, int y, int maxWidth) {

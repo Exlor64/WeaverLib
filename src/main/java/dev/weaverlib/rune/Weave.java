@@ -61,6 +61,6 @@ public enum Weave {
 
     public static AonRecognition.Assessment recognize(List<List<Point>> strokes) {
         return AonRecognition.assess(strokes, TEMPLATES,
-            AonRecognition.Tolerance.defaults(.16, .025), .10, .035);
+            AonRecognition.Tolerance.defaults(.18, .022), .115, .030);
     }
 }
