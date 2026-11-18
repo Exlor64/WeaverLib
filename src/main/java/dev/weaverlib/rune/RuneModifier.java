@@ -33,6 +33,11 @@ public enum RuneModifier {
 
     private static final List<AonRecognition.Template> TEMPLATES =
         Arrays.stream(values()).map(RuneModifier::template).toList();
+    private static final AonRecognition.Tolerance TOLERANCE = AonRecognition.Tolerance.defaults(.13, .025);
+    private static final AonRecognition.Template WIDE_PULSE = new AonRecognition.Template("pulse", List.of(
+        List.of(new Point(.12, .61), new Point(.29, .61), new Point(.44, .25),
+            new Point(.58, .76), new Point(.74, .46), new Point(.88, .46))
+    ));
 
     private final Slot slot;
     private final AonRecognition.Template template;
@@ -51,11 +56,18 @@ public enum RuneModifier {
     }
 
     public static RuneModifier recognize(List<List<Point>> strokes) {
-        var match = AonRecognition.assess(strokes, TEMPLATES,
-            AonRecognition.Tolerance.defaults(.13, .025), .075, .028);
-        if (match.template() == null) {
-            return null;
+        var match = AonRecognition.assess(strokes, TEMPLATES, TOLERANCE, .075, .028);
+        if (match.template() != null) {
+            return valueOf(match.template().id().toUpperCase(Locale.ROOT));
         }
-        return valueOf(match.template().id().toUpperCase(Locale.ROOT));
+        // Pulse has a steep rise and fall that is easy to round or split when drawn by hand.
+        if (!match.ambiguous() && strokes.size() <= 2) {
+            double pulseError = AonRecognition.shapeError(strokes, PULSE.template(), TOLERANCE.minimumExtent());
+            double wideError = AonRecognition.shapeError(strokes, WIDE_PULSE, TOLERANCE.minimumExtent());
+            if (pulseError <= Math.min(.125, match.error()) || wideError <= Math.min(.09, match.error())) {
+                return PULSE;
+            }
+        }
+        return null;
     }
 }

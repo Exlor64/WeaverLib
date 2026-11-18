@@ -72,9 +72,14 @@ public final class FocusSpell {
             FocusComponent part = FocusComponent.recognize(glyph);
             if (part != null) {
                 parts.add(new PartInput(part, arguments.get(index)));
-            } else if (index == 0 || !arguments.get(index).isEmpty()
-                    || RuneModifier.recognize(glyph) != RuneModifier.NULL) {
-                throw invalid("unknown_rune");
+            } else {
+                RuneModifier modifier = RuneModifier.recognize(glyph);
+                if (modifier == RuneModifier.PULSE) {
+                    throw invalid("pulse_needs_base");
+                }
+                if (index == 0 || !arguments.get(index).isEmpty() || modifier != RuneModifier.NULL) {
+                    throw invalid("unknown_rune");
+                }
             }
         }
         return parts;

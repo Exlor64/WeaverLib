@@ -27,6 +27,7 @@
   "weaverlib.canvas_next": "Tab · Next rune",
   "weaverlib.argument_layout": "Draw modifiers around the central rune.",
   "weaverlib.argument_form": "Expected a Form or Null rune.",
+  "weaverlib.pulse_needs_base": "Pulse needs Lux or Sana.",
   "weaverlib.argument_target": "Expected a Target or Null rune.",
   "weaverlib.argument_power": "Expected a Power or Null rune.",
   "weaverlib.no_target": "Your gaze finds no valid target.",

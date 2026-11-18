@@ -1,4 +1,4 @@
-# WeaverLib 0.1.33
+# WeaverLib 0.1.34
 
 An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and Java 21. By Ex.
 
@@ -67,6 +67,8 @@ Draw the main effect near the center. Press **Tab** between complete runes to ma
 | Power | Base effect | **Surge** multiplies duration or healing by 1.5 and rounds its Vis multiplier up per recipient. |
 
 **Null** skips one slot and uses its default. Trailing slots can be omitted. For example, draw Lux in the center, Null above it, and Gaze to its right to give another player night vision. For stronger self-healing, draw Sana with Null, Null, Surge in clockwise order.
+
+To cast Pulse, draw Lux or Sana first and press **Tab**. Draw a small heartbeat line above it with a short lead-in, a sharp rise and dip, and a rise halfway back into a short tail. Pulse goes in the Form slot, so it comes before Gaze and Surge.
 
 Lux affects players. Sana can heal living targets. Pulse charges per affected target plus 2 Vis. A malformed spell, missing target, or insufficient Vis leaves the aura unspent. Typed incantations use the effect's defaults.
 

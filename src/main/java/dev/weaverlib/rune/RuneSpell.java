@@ -32,7 +32,8 @@ public record RuneSpell(Weave effect, double potency, boolean pulse, boolean gaz
         }
         var match = Weave.recognize(glyphs.getFirst());
         if (match.template() == null) {
-            throw new IllegalArgumentException("unknown_rune");
+            throw new IllegalArgumentException(RuneModifier.recognize(glyphs.getFirst()) == RuneModifier.PULSE
+                ? "pulse_needs_base" : "unknown_rune");
         }
         Weave effect = Weave.fromWords(match.template().id());
         Point center = AonDrawing.center(glyphs.getFirst());

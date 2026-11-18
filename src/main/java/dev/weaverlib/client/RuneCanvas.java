@@ -385,30 +385,37 @@ final class RuneCanvas extends Screen {
         }
         var latest = strokes.isEmpty() ? glyphs.getLast() : strokes;
         int number = glyphs.size() + (strokes.isEmpty() ? 0 : 1);
-        String name = recognizedName(recognitionInk(latest), number);
+        var ink = recognitionInk(latest);
+        String name = recognizedName(ink, number);
+        if (name == null && RuneModifier.recognize(ink) == RuneModifier.PULSE) {
+            runeStatus = Component.translatable("weaverlib.pulse_needs_base").withColor(0xFFFFE4A5);
+            return;
+        }
         runeStatus = name == null
             ? Component.translatable("weaverlib.rune_unrecognized", number).withColor(0xFFFFA6A6)
             : Component.translatable("weaverlib.rune_recognized", number, name).withColor(0xFFA1E5BE);
     }
 
     private String recognizedName(List<List<Point>> ink, int number) {
-        FocusComponent component = FocusComponent.recognize(ink);
-        String name = component == null ? null : component.word();
-        if (name == null) {
-            if (number == 1 || (number == 2 && !glyphs.isEmpty()
-                    && FocusComponent.recognize(recognitionInk(glyphs.getFirst())) == FocusComponent.named("inscribe"))) {
-                var effect = Weave.recognize(ink);
-                if (effect.template() != null) {
-                    name = effect.template().id();
-                }
-            } else {
+        int effectIndex = !glyphs.isEmpty()
+            && FocusComponent.recognize(recognitionInk(glyphs.getFirst())) == FocusComponent.named("inscribe") ? 1 : 0;
+        if (number > effectIndex + 1) {
+            var root = recognitionInk(glyphs.get(effectIndex));
+            if (FocusComponent.recognize(root) == null && Weave.recognize(root).template() != null) {
                 RuneModifier modifier = RuneModifier.recognize(ink);
-                if (modifier != null) {
-                    name = modifier.template().id();
-                }
+                return modifier == null ? null : modifier.template().id();
             }
         }
-        return name;
+        FocusComponent component = FocusComponent.recognize(ink);
+        if (component != null) {
+            return component.word();
+        }
+        if (number == effectIndex + 1) {
+            var effect = Weave.recognize(ink);
+            return effect.template() == null ? null : effect.template().id();
+        }
+        RuneModifier modifier = RuneModifier.recognize(ink);
+        return modifier == RuneModifier.NULL ? modifier.template().id() : null;
     }
 
     private void openArguments() {
