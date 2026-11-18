@@ -14,12 +14,18 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 
 final class SolWings extends RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> {
-    private static final Vec3[] TIPS = {
-        new Vec3(0.29, 0.60, 0.28), new Vec3(0.47, 0.50, 0.32),
-        new Vec3(0.68, 0.39, 0.34), new Vec3(0.88, 0.25, 0.36),
-        new Vec3(1.08, 0.12, 0.38), new Vec3(1.29, -0.02, 0.41),
-        new Vec3(1.49, -0.20, 0.43), new Vec3(1.68, -0.43, 0.45),
-        new Vec3(1.83, -0.73, 0.47), new Vec3(1.87, -0.98, 0.48)
+    private static final Vec3[] PRIMARIES = {
+        new Vec3(0.25, 0.81, 0.22), new Vec3(0.47, 0.76, 0.26),
+        new Vec3(0.70, 0.72, 0.29), new Vec3(0.95, 0.62, 0.32),
+        new Vec3(1.21, 0.46, 0.34), new Vec3(1.45, 0.28, 0.37),
+        new Vec3(1.69, 0.04, 0.41), new Vec3(1.90, -0.28, 0.44),
+        new Vec3(2.04, -0.63, 0.47), new Vec3(2.06, -0.98, 0.50)
+    };
+    private static final Vec3[] LEADING_EDGE = {
+        new Vec3(0.02, 0.09, 0.02), new Vec3(0.30, -0.17, 0.06),
+        new Vec3(0.65, -0.49, 0.13), new Vec3(1.03, -0.76, 0.21),
+        new Vec3(1.45, -0.87, 0.29), new Vec3(1.80, -0.92, 0.39),
+        PRIMARIES[9]
     };
 
     SolWings(PlayerRenderer renderer) {
@@ -37,7 +43,7 @@ final class SolWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abstr
         int tint = charge < 0.7F
             ? SolMesh.mix(0x636773, SolMesh.GOLD, charge / 0.7F)
             : SolMesh.mix(SolMesh.GOLD, 0xFFFFFF, (charge - 0.7F) / 0.3F);
-        float opacity = Mth.lerp(charge, 0.52F, 0.97F);
+        float opacity = Mth.lerp(charge, 0.60F, 0.98F);
         float spread = switch (view.mode()) {
             case OFF -> 25F;
             case RANGED -> 12F;
@@ -46,7 +52,7 @@ final class SolWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abstr
         var buffer = buffers.getBuffer(SolMesh.layer());
         poses.pushPose();
         getParentModel().body.translateAndRotate(poses);
-        for (int side : new int[] {-1, 1}) {
+        for (int side = -1; side <= 1; side += 2) {
             poses.pushPose();
             poses.translate(side * 0.13F, 0.19F, 0.15F);
             float flutter = Mth.sin(age * 0.13F) * 4 + speed * Mth.sin(swing * 0.67F) * 7;
@@ -61,25 +67,59 @@ final class SolWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abstr
 
     private static void drawWing(VertexConsumer buffer, PoseStack.Pose pose, int tint, float charge,
             float opacity, float age) {
-        for (int i = TIPS.length - 1; i >= 0; i--) {
-            float fraction = i / (float) (TIPS.length - 1);
-            Vec3 root = new Vec3(0.06 + 1.18 * fraction, 0.17 - 0.89 * fraction + 0.14 * fraction * fraction,
-                0.025 + 0.29 * fraction);
-            Vec3 tip = TIPS[i].add(0, Mth.sin(age * 0.17F + i * 0.45F) * 0.025 * fraction, 0);
-            Vec3 middle = root.lerp(tip, 0.50).add(0.065, -0.02, 0.04);
-            double width = 0.055 + 0.050 * fraction;
-            Vec3 spread = new Vec3(width, width * 0.60, 0.02);
-            Vec3 edgeLight = spread.scale(1.55);
-            if (charge > 0) {
-                SolMesh.quad(buffer, pose, tint, 0, charge * 0.24F, 0, charge * 0.24F,
-                    root, middle.add(edgeLight), tip, middle.subtract(edgeLight));
-            }
-            SolMesh.quad(buffer, pose, tint, opacity * 0.88F, opacity * 0.60F, opacity * 0.08F,
-                opacity * 0.82F, root, middle.add(spread), tip, middle.subtract(spread));
-            Vec3 rim = spread.scale(0.21).add(0, 0, 0.008);
-            int spine = SolMesh.mix(tint, 0xFFFFFF, charge * 0.60F);
-            SolMesh.quad(buffer, pose, spine, opacity, opacity * 0.7F, opacity * 0.26F, opacity * 0.6F,
-                root, middle.add(rim), tip, middle.subtract(rim));
+        int shadow = SolMesh.mix(tint, 0x3C3541, 0.20F - charge * 0.12F);
+        int ridge = SolMesh.mix(tint, 0xFFF8E4, 0.13F + charge * 0.42F);
+        for (int i = 1; i < LEADING_EDGE.length; i++) {
+            Vec3 a = LEADING_EDGE[i - 1];
+            Vec3 b = LEADING_EDGE[i];
+            SolMesh.quad(buffer, pose, shadow, opacity * .86F, opacity * .86F, opacity * .48F, opacity * .48F,
+                a, b, covertEdge(i), covertEdge(i - 1));
+            SolMesh.quad(buffer, pose, ridge, .12F + charge * .32F, .12F + charge * .32F, 0, 0,
+                a, b, b.add(-0.07, 0.05, 0.02), a.add(-0.04, 0.06, 0.02));
         }
+
+        for (int i = PRIMARIES.length - 1; i >= 0; i--) {
+            float f = i / (float) (PRIMARIES.length - 1);
+            Vec3 root = new Vec3(.05 + 1.51 * f, .11 - 1.16 * f + .26 * f * f, .025 + .29 * f);
+            Vec3 tip = PRIMARIES[i].add(0, Mth.sin(age * .16F + i * .42F) * .028, 0);
+            feather(buffer, pose, root, tip, .111 + .046 * f, tint, shadow, ridge, opacity, charge);
+        }
+
+        for (int i = LEADING_EDGE.length - 2; i >= 0; i--) {
+            Vec3 a = LEADING_EDGE[i];
+            Vec3 b = LEADING_EDGE[i + 1];
+            Vec3 root = a.lerp(b, .38).add(-.03, .035, -.012);
+            Vec3 tip = root.add(.20 + .047 * i, .39 - .018 * i, .20);
+            feather(buffer, pose, root, tip, .106, tint, shadow, ridge, opacity * .85F, charge * .55F);
+        }
+    }
+
+    private static Vec3 covertEdge(int index) {
+        int primary = Math.round(index * (PRIMARIES.length - 1F) / (LEADING_EDGE.length - 1F));
+        return LEADING_EDGE[index].lerp(PRIMARIES[primary], .44).add(0, 0, .045);
+    }
+
+    private static void feather(VertexConsumer buffer, PoseStack.Pose pose, Vec3 root, Vec3 tip, double width,
+            int tint, int shadow, int ridge, float opacity, float glow) {
+        Vec3 direction = tip.subtract(root);
+        Vec3 side = new Vec3(direction.y, -direction.x, 0).normalize().scale(width);
+        Vec3 shoulder = root.lerp(tip, .36).add(.04, -.012, .05);
+        Vec3 taper = root.lerp(tip, .76).add(.07, -.028, .037);
+        Vec3 left = shoulder.add(side);
+        Vec3 right = shoulder.subtract(side);
+        Vec3 leftTip = taper.add(side.scale(.62));
+        Vec3 rightTip = taper.subtract(side.scale(.62));
+        if (glow > 0) {
+            SolMesh.quad(buffer, pose, tint, 0, glow * .19F, 0, glow * .17F,
+                root, shoulder.add(side.scale(1.40)), tip, shoulder.subtract(side.scale(1.40)));
+        }
+        SolMesh.quad(buffer, pose, tint, opacity * .73F, opacity * .94F, opacity * .78F, opacity * .95F,
+            root, left, leftTip, taper);
+        SolMesh.quad(buffer, pose, shadow, opacity * .73F, opacity * .95F, opacity * .68F, opacity * .92F,
+            root, shoulder, rightTip, right);
+        SolMesh.quad(buffer, pose, tint, opacity * .95F, opacity * .78F, opacity * .26F, opacity * .66F,
+            taper, leftTip, tip, rightTip);
+        SolMesh.quad(buffer, pose, ridge, opacity * .43F, opacity * .90F, opacity * .36F, opacity * .50F,
+            root, shoulder.add(side.scale(.16)), tip, taper.subtract(side.scale(.12)));
     }
 }
