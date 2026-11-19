@@ -26,7 +26,8 @@ final class AngelVisuals {
         }
         if (effects.size() >= 128) effects.removeFirst();
         effects.add(new Flash(burst, level.getGameTime(), burst.kind() == AngelBurst.FEATHER ? 3 : 22));
-        if (burst.kind() == AngelBurst.AWAKEN || burst.kind() == AngelBurst.IMPACT || burst.kind() == AngelBurst.DIM) {
+        if (burst.kind() == AngelBurst.AWAKEN || burst.kind() == AngelBurst.IMPACT
+                || burst.kind() == AngelBurst.FEATHER_IMPACT || burst.kind() == AngelBurst.DIM) {
             int count = burst.kind() == AngelBurst.DIM ? 5 : 28;
             for (int i = 0; i < count; i++) {
                 double angle = i * Math.TAU / count;
@@ -63,7 +64,9 @@ final class AngelVisuals {
                 continue;
             }
             float dim = effect.burst().kind() == AngelBurst.DIM ? .22F : 1;
-            ring(buffer, pose, center.add(0, .09, 0), .4 + 3.4 * progress, (1 - progress) * dim);
+            if (effect.burst().kind() != AngelBurst.FEATHER_IMPACT) {
+                ring(buffer, pose, center.add(0, .09, 0), .4 + 3.4 * progress, (1 - progress) * dim);
+            }
             for (int i = 0; i < 8; i++) {
                 double angle = i * Math.TAU / 8 + progress * 2;
                 Vec3 at = center.add(Math.cos(angle) * (.35 + progress), progress * 2.4, Math.sin(angle) * (.35 + progress));

@@ -13,6 +13,7 @@ public record AngelBurst(int kind, Vec3 from, Vec3 to) implements CustomPacketPa
     public static final int DIM = 1;
     public static final int IMPACT = 2;
     public static final int FEATHER = 3;
+    public static final int FEATHER_IMPACT = 4;
     public static final Type<AngelBurst> TYPE =
         new Type<>(ResourceLocation.fromNamespaceAndPath(WeaverLib.ID, "angel_burst"));
     public static final StreamCodec<ByteBuf, AngelBurst> CODEC = StreamCodec.of((buf, burst) -> {

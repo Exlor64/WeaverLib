@@ -390,7 +390,7 @@ public final class Angels {
         }
         burst(player, AngelBurst.FEATHER, feather.position, end);
         if (hit != null || end.distanceToSqr(next) > .00001) {
-            burst(player, AngelBurst.IMPACT, end, end);
+            burst(player, AngelBurst.FEATHER_IMPACT, end, end);
             return false;
         }
         feather.position = end;
