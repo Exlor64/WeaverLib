@@ -59,14 +59,7 @@ final class AngelVisuals {
             Vec3 center = effect.burst().from().subtract(camera);
             if (effect.burst().kind() == AngelBurst.FEATHER) {
                 Vec3 end = effect.burst().to().subtract(camera);
-                Vec3 forward = end.subtract(center).normalize();
-                Vec3 side = forward.cross(new Vec3(0, 1, 0)).normalize();
-                if (side.lengthSqr() < .01) side = new Vec3(1, 0, 0);
-                Vec3 head = center.lerp(end, Math.min(1, progress * 3));
-                Vec3 tail = head.subtract(forward.scale(.85));
-                Vec3 shoulder = tail.lerp(head, .35);
-                AngelMesh.quad(buffer, pose, 0xFFF3BF, 0, 1-progress, 1-progress, 1-progress,
-                    tail, shoulder.add(side.scale(.15)), head, shoulder.subtract(side.scale(.15)));
+                feather(buffer, pose, center, end, progress);
                 continue;
             }
             float dim = effect.burst().kind() == AngelBurst.DIM ? .22F : 1;
@@ -99,6 +92,58 @@ final class AngelVisuals {
             }
         }
         client.renderBuffers().bufferSource().endBatch(AngelMesh.layer());
+    }
+
+    private static void feather(VertexConsumer buffer, PoseStack.Pose pose, Vec3 start, Vec3 end,
+            float progress) {
+        Vec3 forward = end.subtract(start).normalize();
+        if (forward.lengthSqr() < .001) return;
+        Vec3 head = start.lerp(end, Math.min(1, progress * 3));
+        Vec3 towardCamera = head.scale(-1).normalize();
+        // The primary feather face follows the camera; a crossed face preserves its volume in motion.
+        Vec3 side = forward.cross(towardCamera);
+        if (side.lengthSqr() < .001) side = forward.cross(new Vec3(0, 1, 0));
+        if (side.lengthSqr() < .001) side = forward.cross(new Vec3(1, 0, 0));
+        side = side.normalize();
+        Vec3 other = forward.cross(side).normalize();
+        float opacity = 1 - progress * .65F;
+        Vec3 tail = head.subtract(forward.scale(1.18));
+        Vec3 trail = head.subtract(forward.scale(2.3));
+        Vec3 middle = tail.lerp(head, .44);
+        AngelMesh.quad(buffer, pose, 0xFFB43D, 0, opacity * .20F, opacity * .20F, 0,
+            trail.subtract(side.scale(.10)), middle.subtract(side.scale(.28)),
+            middle.add(side.scale(.28)), trail.add(side.scale(.10)));
+        AngelMesh.quad(buffer, pose, 0xFFF2B0, 0, opacity * .75F, opacity * .75F, 0,
+            trail, head.subtract(side.scale(.035)), head.add(side.scale(.035)), trail);
+        for (Vec3 across : new Vec3[]{side, other}) {
+            Vec3 broad = across.scale(.22);
+            // Soft gold silhouette, opaque white-gold vanes, and a white central shaft.
+            AngelMesh.quad(buffer, pose, 0xFFB531, 0, opacity * .26F, 0, opacity * .26F,
+                tail, middle.add(broad.scale(1.65)), head, middle.subtract(broad.scale(1.65)));
+            for (int i = 0; i < 6; i++) {
+                double a = i / 6.0, b = (i + 1) / 6.0;
+                Vec3 p = tail.lerp(head, a), q = tail.lerp(head, b);
+                double widthA = Math.sin(Math.PI * a), widthB = Math.sin(Math.PI * b);
+                AngelMesh.quad(buffer, pose, 0xFFF1BC, opacity, opacity, opacity * .92F, opacity * .92F,
+                    p.subtract(broad.scale(widthA)), p.add(broad.scale(widthA)),
+                    q.add(broad.scale(widthB)), q.subtract(broad.scale(widthB)));
+            }
+            AngelMesh.quad(buffer, pose, 0xFFFFFF, opacity, opacity, opacity, opacity,
+                tail.subtract(across.scale(.018)), tail.add(across.scale(.018)),
+                head.add(across.scale(.012)), head.subtract(across.scale(.012)));
+            for (int i = 1; i < 6; i++) {
+                double t = i / 7.0;
+                Vec3 root = tail.lerp(head, t);
+                Vec3 edge = root.add(forward.scale(.10)).add(broad.scale(Math.sin(Math.PI * t)));
+                AngelMesh.quad(buffer, pose, 0xFFD16A, opacity * .85F, opacity * .85F, 0, 0,
+                    root, root.add(forward.scale(.016)), edge.add(forward.scale(.016)), edge);
+            }
+        }
+        // A camera-facing head glint remains visible when a feather travels directly toward/away from us.
+        Vec3 up = towardCamera.cross(side).normalize();
+        Vec3 glint = side.scale(.095);
+        AngelMesh.quad(buffer, pose, 0xFFFFFF, opacity * .30F, opacity, opacity * .30F, opacity,
+            head.subtract(glint), head.add(up.scale(.14)), head.add(glint), head.subtract(up.scale(.14)));
     }
 
     private static void spiral(VertexConsumer buffer, PoseStack.Pose pose, AngelFlightFrame frame,

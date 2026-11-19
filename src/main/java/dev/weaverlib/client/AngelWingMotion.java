@@ -38,6 +38,11 @@ public final class AngelWingMotion {
 
     private AngelWingMotion() {}
 
+    /** Hover cadence is 30% below the original rate; normal ascent/descent varies it by up to 40%. */
+    public static double hoverRate(double verticalSpeed) {
+        return (.29 + .88 * .13) * .70 * (1 + Math.clamp(verticalSpeed / .15, -1, 1) * .40);
+    }
+
     public static double smooth(double t) {
         t = Math.clamp(t, 0, 1);
         return t * t * (3 - 2 * t);

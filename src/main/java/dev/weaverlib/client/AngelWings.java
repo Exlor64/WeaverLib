@@ -19,7 +19,7 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
     private ClientLevel world;
 
     private static final class Motion {
-        double lastTime, phase, flight, fast, effort = .7, guard, previousSpeed;
+        double lastTime, phase, flight, fast, effort = .7, guard, previousSpeed, vertical;
         Motion(double time) { lastTime = time; }
     }
 
@@ -50,11 +50,14 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
             + Math.max(0, 1.15 - velocity) * .65 + Math.max(0, acceleration) * 5, .08, 1) : .88;
         double blend = 1 - Math.exp(-elapsed / 4);
         m.effort += (effort - m.effort) * blend;
+        m.vertical += (player.getDeltaMovement().y - m.vertical) * blend;
         m.flight += ((flying ? 1 : 0) - m.flight) * blend;
         m.fast += ((view.fast() ? 1 : 0) - m.fast) * blend;
         m.guard += ((view.defending() && !flying ? 1 : 0) - m.guard) * (1 - Math.exp(-elapsed / 2.2));
         // Integrating phase prevents animation jumps when speed or flight mode changes.
-        m.phase = (m.phase + elapsed * (.075 + m.flight * (.215 + m.effort * .13))) % Math.TAU;
+        double hoverRate = AngelWingMotion.hoverRate(m.vertical);
+        double flightRate = hoverRate + m.fast * (.29 + m.effort * .13 - hoverRate);
+        m.phase = (m.phase + elapsed * (.075 + m.flight * (flightRate - .075))) % Math.TAU;
         double attack = (time - view.swing()) / 12;
         pose.pushPose();
         getParentModel().body.translateAndRotate(pose);
