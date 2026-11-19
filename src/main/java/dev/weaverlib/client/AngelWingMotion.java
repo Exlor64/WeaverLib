@@ -8,7 +8,8 @@ public final class AngelWingMotion {
         Point blend(Point p, double t) { return scale(1 - t).add(p.scale(t)); }
     }
 
-    public record Joints(Point root, Point elbow, Point wrist, Point tip, double recovery, double guard) {
+    public record Joints(Point root, Point elbow, Point wrist, Point tip, double recovery, double guard,
+                         double strikeRoll) {
         /** Curved, feathered surface following the articulated bones, rather than a rigid panel. */
         public Point surface(double span, double trail) {
             double s = Math.clamp(span, 0, 1) * 3;
@@ -31,8 +32,27 @@ public final class AngelWingMotion {
             }
             double length = .62 + .24 * Math.sin(Math.min(1, span) * Math.PI);
             // Closed feathers scoop around the chest; open feathers flex on the recovery stroke.
-            return clearBody(new Point(x + .06 * trail * (1 - guard), y + trail * length,
-                z + (.10 - guard * .20) * trail + .10 * recovery * Math.sin(trail * Math.PI)));
+            double dx = .06 * trail * (1 - guard), dy = trail * length;
+            double dz = (.10 - guard * .20) * trail + .10 * recovery * Math.sin(trail * Math.PI);
+            if (strikeRoll > 0) {
+                // Roll the feather fan around its curved leading edge. The shoulder stays anchored;
+                // the outer wing turns edge-first, with the feathers trailing behind the strike.
+                double da = -.5 + 2 * t - 1.5 * t2, db = -5 * t + 4.5 * t2;
+                double dc = .5 + 4 * t - 4.5 * t2, dd = -t + 1.5 * t2;
+                double tx = a.x * da + b.x * db + c.x * dc + d.x * dd;
+                double ty = a.y * da + b.y * db + c.y * dc + d.y * dd;
+                double tz = a.z * da + b.z * db + c.z * dc + d.z * dd;
+                double inverse = 1 / Math.sqrt(Math.max(1.0E-12, tx * tx + ty * ty + tz * tz));
+                tx *= inverse; ty *= inverse; tz *= inverse;
+                double angle = strikeRoll * smooth(span / .22);
+                double cosine = Math.cos(angle), sine = Math.sin(angle);
+                double along = (tx * dx + ty * dy + tz * dz) * (1 - cosine);
+                double rolledX = dx * cosine + (ty * dz - tz * dy) * sine + tx * along;
+                double rolledY = dy * cosine + (tz * dx - tx * dz) * sine + ty * along;
+                dz = dz * cosine + (tx * dy - ty * dx) * sine + tz * along;
+                dx = rolledX; dy = rolledY;
+            }
+            return clearBody(new Point(x + dx, y + dy, z + dz));
         }
     }
 
@@ -57,6 +77,11 @@ public final class AngelWingMotion {
 
     public static Joints sample(double phase, double flight, double fast, double effort,
             double guard, double attack, int pair) {
+        return sample(phase, flight, fast, effort, guard, attack, pair, 1);
+    }
+
+    public static Joints sample(double phase, double flight, double fast, double effort,
+            double guard, double attack, int pair, int side) {
         guard = smooth(guard);
         double wave = stroke(phase - pair * .32);
         double delayed = stroke(phase - .72 - pair * .32);
@@ -69,7 +94,7 @@ public final class AngelWingMotion {
         double sweep = (-13 + spread) + (1 - flight) * Math.sin(phase) * 1.6 + lift * (1 - fast) * 43 + lift * fast * 8;
         double flap = -12 + (1 - flight) * Math.sin(phase - .4) * 2 + lift * (18 + fast * 37);
         double twist = amplitude * (Math.cos(phase - .4) * 12 - 5);
-        Point root = new Point(.32, .17 + pair * .22, .19);
+        Point root = new Point(.22, .17 + pair * .22, .16);
         Point elbow = root.add(rotate(new Point(.68 * size, -.16 * size, 0), flap, sweep, twist));
         Point wrist = elbow.add(rotate(new Point(.67 * size, -.07 * size, .015),
             flap + delayed * amplitude * 27 + recovery * amplitude * 23,
@@ -78,9 +103,12 @@ public final class AngelWingMotion {
             flap + tipLag * amplitude * 38 + recovery * amplitude * 32,
             sweep + recovery * amplitude * 32, twist + tipLag * amplitude * 16));
 
+        double strikeRoll = 0;
         if (attack >= 0 && attack < 1 && guard < .1) {
             // Wind up outside the shoulder, sweep around the torso, then unfold back to rest.
             double strength = attack < .48 ? smooth(attack / .18) : 1 - smooth((attack - .48) / .52);
+            // Fully twist before the four-tick damage frame, then unwind with the recovery.
+            strikeRoll = Math.toRadians(80) * strength;
             double angle = Math.toRadians(-25 + 128 * smooth((attack - .12) / .36));
             Point strikeElbow = new Point(.32 + .68 * Math.cos(angle * .55), root.y - .08,
                 .19 - .68 * Math.sin(angle * .55));
@@ -92,11 +120,13 @@ public final class AngelWingMotion {
             wrist = wrist.blend(strikeWrist, strength);
             tip = tip.blend(strikeTip, strength);
         }
-        // The upper wing clears the shoulder. Elbow and wrist then curl the primaries across the front.
-        elbow = elbow.blend(new Point(.78, root.y - .10, -.29), guard);
-        wrist = wrist.blend(new Point(.70, root.y - .15, -.73), guard);
-        tip = tip.blend(new Point(.025, root.y - .10, -.89 - pair * .035), guard);
-        return new Joints(root, clearBody(elbow), clearBody(wrist), clearBody(tip), recovery * amplitude, guard);
+        // Curl around the shoulders, then cross the centerline at opposing angles. A small depth
+        // separation layers the two wings instead of letting their luminous surfaces intersect.
+        elbow = elbow.blend(new Point(.74, root.y - .10, -.29), guard);
+        wrist = wrist.blend(new Point(.60, root.y - .15 - side * .11, -.73), guard);
+        tip = tip.blend(new Point(-.34, root.y + .02 - side * .28, -.92 - pair * .035 - side * .04), guard);
+        return new Joints(root, clearBody(elbow), clearBody(wrist), clearBody(tip), recovery * amplitude, guard,
+            strikeRoll);
     }
 
     private static Point rotate(Point p, double flap, double sweep, double twist) {
@@ -110,7 +140,9 @@ public final class AngelWingMotion {
 
     private static Point clearBody(Point p) {
         // Keep transitions and feather width outside the torso, including intermediate attack frames.
-        if (p.y > -.3 && p.y < 1.45 && Math.abs(p.x) < .32 && Math.abs(p.z) < .25) {
+        // A close attachment behind the actual torso is allowed; forward-sweeping feathers still
+        // clear its sides. The back margin also allows for the feather's raised luminous shaft.
+        if (p.y > -.3 && p.y < 1.45 && Math.abs(p.x) < .32 && p.z > -.25 && p.z < .15) {
             return new Point(.32, p.y, p.z);
         }
         return p;

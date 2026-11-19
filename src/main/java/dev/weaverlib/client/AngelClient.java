@@ -123,7 +123,7 @@ final class AngelClient {
             poses.translate(0, -.04, -.08);
             poses.scale(side * .85F, -.85F, .85F);
             AngelWings.geometry(event.getMultiBufferSource().getBuffer(AngelMesh.layer()), poses,
-                AngelWingMotion.sample(player.tickCount * .12, 0, 0, 0, guardPose, strike, 0));
+                AngelWingMotion.sample(player.tickCount * .12, 0, 0, 0, guardPose, strike, 0, side));
             poses.popPose();
         }
     }

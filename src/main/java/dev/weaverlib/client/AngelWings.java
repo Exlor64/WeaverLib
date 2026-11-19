@@ -65,7 +65,7 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
         for (int pair = 0; pair < view.rank(); pair++) {
             for (int side = -1; side <= 1; side += 2) {
                 double strike = view.wing() == pair * 2 + (side > 0 ? 1 : 0) ? attack : -1;
-                var joints = AngelWingMotion.sample(m.phase, m.flight, m.fast, m.effort, m.guard, strike, pair);
+                var joints = AngelWingMotion.sample(m.phase, m.flight, m.fast, m.effort, m.guard, strike, pair, side);
                 pose.pushPose();
                 pose.scale(side, 1, 1);
                 geometry(buffer, pose, joints);

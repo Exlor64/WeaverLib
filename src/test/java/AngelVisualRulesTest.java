@@ -27,24 +27,43 @@ public final class AngelVisualRulesTest {
     public static void run() {
         for (int pair = 0; pair < 3; pair++) {
             var guard = AngelWingMotion.sample(0, 0, 0, 0, 1, -1, pair);
-            require(guard.tip().x() < .1 && guard.tip().z() < -.8, "Shield tip must wrap across the chest");
+            require(guard.tip().x() < -.25 && guard.tip().z() < -.8, "Shield tip must cross the chest centerline");
+            var opposite = AngelWingMotion.sample(0, 0, 0, 0, 1, -1, pair, -1);
+            require(opposite.tip().x() < -.25, "Both shield wings must cross beyond the centerline");
+            require(opposite.tip().y() - guard.tip().y() > .4, "Guard wings need opposing crossing angles");
+            require(Math.abs(opposite.tip().z() - guard.tip().z()) > .05, "Crossed wings need depth separation");
+            require(guard.root().x() < .25 && guard.root().z() <= .17, "Wing roots must sit close to the back");
             require(guard.elbow().x() > .7 && guard.elbow().z() < -.2, "Elbow must clear the shoulder");
+            // At the server's damage frame, the upper edge must lead the feather fan into the sweep.
+            double impact = 4.0 / 12;
+            var strike = AngelWingMotion.sample(0, 0, 0, 0, 0, impact, pair);
+            var next = AngelWingMotion.sample(0, 0, 0, 0, 0, impact + .0001, pair);
+            var edge = strike.surface(.75, 0);
+            var trailing = strike.surface(.75, .8);
+            var after = next.surface(.75, 0);
+            double vx = after.x() - edge.x(), vy = after.y() - edge.y(), vz = after.z() - edge.z();
+            double velocity = Math.sqrt(vx * vx + vy * vy + vz * vz);
+            double edgeLead = ((edge.x() - trailing.x()) * vx + (edge.y() - trailing.y()) * vy
+                + (edge.z() - trailing.z()) * vz) / velocity;
+            require(edgeLead > .25, "The upper wing edge must hit before the trailing feathers");
             for (int frame = 0; frame <= 60; frame++) {
                 for (int mode = 0; mode < 4; mode++) {
                     double phase = frame * Math.PI / 15;
-                    var joints = AngelWingMotion.sample(phase, mode >= 2 ? 1 : 0, mode == 3 ? 1 : 0,
-                        .9, mode == 0 ? frame / 60.0 : 0, mode == 1 ? frame / 60.0 : -1, pair);
-                    for (int u = 0; u <= 48; u++) {
-                        for (int v = 0; v <= 16; v++) {
-                            var p = joints.surface(u / 40.0, v / 16.0 - .04);
-                            require(Double.isFinite(p.x()) && Double.isFinite(p.y()) && Double.isFinite(p.z()),
-                                "Wing vertex must be finite");
-                            boolean torso = p.y() > -.25 && p.y() < 1.40
-                                && Math.abs(p.x()) < .26 && Math.abs(p.z()) < .17;
-                            require(!torso, "Wing crossed torso during mode " + mode + " frame " + frame);
+                    for (int side : new int[]{-1, 1}) {
+                        var joints = AngelWingMotion.sample(phase, mode >= 2 ? 1 : 0, mode == 3 ? 1 : 0,
+                            .9, mode == 0 ? frame / 60.0 : 0, mode == 1 ? frame / 60.0 : -1, pair, side);
+                        for (int u = 0; u <= 48; u++) {
+                            for (int v = 0; v <= 16; v++) {
+                                var p = joints.surface(u / 40.0, v / 16.0 - .04);
+                                require(Double.isFinite(p.x()) && Double.isFinite(p.y()) && Double.isFinite(p.z()),
+                                    "Wing vertex must be finite");
+                                boolean torso = p.y() > -.25 && p.y() < 1.40
+                                    && Math.abs(p.x()) < .26 && Math.abs(p.z()) < .13;
+                                require(!torso, "Wing crossed torso during mode " + mode + " frame " + frame);
+                            }
                         }
+                        frames++;
                     }
-                    frames++;
                 }
             }
         }
