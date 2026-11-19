@@ -7,6 +7,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import net.minecraft.client.model.PlayerModel;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -20,6 +22,7 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
 
     private static final class Motion {
         double lastTime, phase, flight, fast, effort = .7, guard, previousSpeed, vertical;
+        long lastBirthParticle = Long.MIN_VALUE;
         Motion(double time) { lastTime = time; }
     }
 
@@ -59,20 +62,65 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
         double flightRate = hoverRate + m.fast * (.29 + m.effort * .13 - hoverRate);
         m.phase = (m.phase + elapsed * (.075 + m.flight * (flightRate - .075))) % Math.TAU;
         double attack = (time - view.swing()) / 12;
+        var formation = Angels.formation(player);
+        long tick = player.level().getGameTime();
+        boolean emitBirth = m.lastBirthParticle != tick && tick % (formation.dim() ? 5 : 2) == 0;
         pose.pushPose();
         getParentModel().body.translateAndRotate(pose);
         var buffer = buffers.getBuffer(AngelMesh.layer());
         for (int pair = 0; pair < view.rank(); pair++) {
             for (int side = -1; side <= 1; side += 2) {
                 double strike = view.wing() == pair * 2 + (side > 0 ? 1 : 0) ? attack : -1;
-                var joints = AngelWingMotion.sample(m.phase, m.flight, m.fast, m.effort, m.guard, strike, pair, side);
+                var normal = AngelWingMotion.sample(m.phase, m.flight, m.fast, m.effort, m.guard, strike, pair, side);
+                double growth = formation.started() < 0 ? 1
+                    : AngelWingMotion.birthProgress(time - formation.started(), pair);
+                var joints = AngelWingMotion.growing(normal, growth);
                 pose.pushPose();
                 pose.scale(side, 1, 1);
                 geometry(buffer, pose, joints);
+                if (growth < 1) {
+                    birthGlow(buffer, pose, joints, growth, formation.dim());
+                    if (emitBirth && growth > .02) birthParticles(pose, player, joints, growth);
+                }
                 pose.popPose();
             }
         }
         pose.popPose();
+        if (emitBirth) m.lastBirthParticle = tick;
+    }
+
+    private static void birthGlow(VertexConsumer buffer, PoseStack pose, AngelWingMotion.Joints joints,
+            double growth, boolean dim) {
+        var p = joints.root();
+        Vec3 root = new Vec3(p.x(), p.y(), p.z() + .035);
+        float alpha = (float) ((dim ? .24 : .88) * (1 - AngelWingMotion.smooth((growth - .72) / .28)));
+        double radius = .065 + Math.sin(growth * Math.PI) * .075;
+        for (int i = 0; i < 8; i++) {
+            double a = i * Math.TAU / 8, b = (i + 1) * Math.TAU / 8;
+            Vec3 edgeA = root.add(Math.cos(a) * radius, Math.sin(a) * radius, 0);
+            Vec3 edgeB = root.add(Math.cos(b) * radius, Math.sin(b) * radius, 0);
+            AngelMesh.quad(buffer, pose.last(), 0xFFCB65, alpha, 0, 0, alpha,
+                root, edgeA, edgeB, root);
+        }
+        AngelMesh.quad(buffer, pose.last(), 0xFFF8D4, 0, alpha, 0, alpha,
+            root.add(-radius * .36, 0, .002), root.add(0, -radius * .65, .002),
+            root.add(radius * .36, 0, .002), root.add(0, radius * .65, .002));
+    }
+
+    private static void birthParticles(PoseStack pose, AbstractClientPlayer player,
+            AngelWingMotion.Joints joints, double growth) {
+        var client = Minecraft.getInstance();
+        Vec3 camera = client.gameRenderer.getMainCamera().getPosition();
+        if (player.distanceToSqr(camera) > 64 * 64) return;
+        var local = joints.surface(Math.clamp(growth, .04, .98), .08);
+        var transformed = pose.last().pose().transformPosition((float) local.x(), (float) local.y(),
+            (float) local.z(), new org.joml.Vector3f());
+        Vec3 at = new Vec3(transformed.x, transformed.y, transformed.z).add(camera);
+        var random = player.getRandom();
+        player.level().addParticle(ParticleTypes.FLAME,
+            at.x + (random.nextDouble() - .5) * .06, at.y, at.z + (random.nextDouble() - .5) * .06,
+            (random.nextDouble() - .5) * .016, .012, (random.nextDouble() - .5) * .016);
+        player.level().addParticle(ParticleTypes.END_ROD, at.x, at.y, at.z, 0, .006, 0);
     }
 
     static void geometry(VertexConsumer buffer, PoseStack pose, AngelWingMotion.Joints joints) {
@@ -103,6 +151,12 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
 
     private static void feather(VertexConsumer buffer, PoseStack.Pose pose, AngelWingMotion.Joints joints,
             double u, double start, double width, double length, double lean, int color) {
+        double forming = AngelWingMotion.featherGrowth(u, joints.growth());
+        if (forming <= .001) return;
+        length *= forming;
+        width *= .20 + .80 * forming;
+        lean *= forming;
+        float alpha = (float) Math.min(1, forming * 2);
         // Five tapered sections make each feather bend with the wing and give it a curved luminous edge.
         for (int band = 0; band < 5; band++) {
             double a = band / 5.0, b = (band + 1) / 5.0;
@@ -114,15 +168,15 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
             Vec3 rightA = point(joints, centerA + wA, vA, .012);
             Vec3 leftB = point(joints, centerB - wB, vB, .012);
             Vec3 rightB = point(joints, centerB + wB, vB, .012);
-            AngelMesh.quad(buffer, pose, color, .92F, .92F, .84F, .84F, leftA, rightA, rightB, leftB);
-            AngelMesh.quad(buffer, pose, 0xFFFBEA, .72F, .72F, .48F, .48F,
+            AngelMesh.quad(buffer, pose, color, .92F * alpha, .92F * alpha, .84F * alpha, .84F * alpha, leftA, rightA, rightB, leftB);
+            AngelMesh.quad(buffer, pose, 0xFFFBEA, .72F * alpha, .72F * alpha, .48F * alpha, .48F * alpha,
                 point(joints, centerA - .004, vA, .025), point(joints, centerA + .004, vA, .025),
                 point(joints, centerB + .003, vB, .025), point(joints, centerB - .003, vB, .025));
             // A narrow, fading gold fringe avoids the old solid diamond-shaped glow cards.
-            AngelMesh.quad(buffer, pose, 0xFFB63E, .20F, 0, 0, .16F,
+            AngelMesh.quad(buffer, pose, 0xFFB63E, .20F * alpha, 0, 0, .16F * alpha,
                 leftA, point(joints, centerA - wA - .016, vA, .006),
                 point(joints, centerB - wB - .012, vB, .006), leftB);
-            AngelMesh.quad(buffer, pose, 0xFFB63E, .20F, 0, 0, .16F,
+            AngelMesh.quad(buffer, pose, 0xFFB63E, .20F * alpha, 0, 0, .16F * alpha,
                 rightA, point(joints, centerA + wA + .016, vA, .006),
                 point(joints, centerB + wB + .012, vB, .006), rightB);
         }

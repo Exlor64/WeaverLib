@@ -25,6 +25,13 @@ public final class AngelVisualRulesTest {
             -x * Math.sin(heading) + z * Math.cos(heading));
     }
     public static void run() {
+        require(AngelWingMotion.birthProgress(-1, 0) == 0, "Growth must not start before transformation");
+        require(AngelWingMotion.birthProgress(36, 0) == 1, "Base wings finish growing after 36 ticks");
+        require(AngelWingMotion.birthProgress(3, 1) == 0, "Additional pairs should be staggered");
+        require(AngelWingMotion.featherGrowth(.05, .35) > AngelWingMotion.featherGrowth(.95, .35),
+            "Inner feathers must emerge before the primaries");
+        require(AngelWingMotion.featherGrowth(1.1, 0) == 0, "No full feathers should appear at the start");
+        require(AngelWingMotion.featherGrowth(1.1, 1) == 1, "Completed wings must have their full feather length");
         for (int pair = 0; pair < 3; pair++) {
             var guard = AngelWingMotion.sample(0, 0, 0, 0, 1, -1, pair);
             require(guard.tip().x() < -.25 && guard.tip().z() < -.8, "Shield tip must cross the chest centerline");
@@ -34,6 +41,35 @@ public final class AngelVisualRulesTest {
             require(Math.abs(opposite.tip().z() - guard.tip().z()) > .05, "Crossed wings need depth separation");
             require(guard.root().x() < .25 && guard.root().z() <= .17, "Wing roots must sit close to the back");
             require(guard.elbow().x() > .8 && guard.elbow().z() > .18, "Guard elbow must pass behind and outside the arm");
+            for (int side : new int[]{-1, 1}) {
+                var full = AngelWingMotion.sample(0, 0, 0, 0, 0, -1, pair, side);
+                require(AngelWingMotion.growing(full, 1) == full, "Growth must finish in the existing full pose");
+                var seed = AngelWingMotion.growing(full, 0);
+                var seedTip = seed.surface(1, 0);
+                require(near(seedTip.x(), full.root().x()) && near(seedTip.y(), full.root().y())
+                    && near(seedTip.z(), full.root().z()), "Growth must begin at the back attachment");
+                for (int step = 0; step <= 36; step++) {
+                    double progress = step / 36.0;
+                    var forming = AngelWingMotion.growing(full, progress);
+                    require(forming.root().equals(full.root()), "Growth cannot move the wing attachment");
+                    for (int u = 0; u <= 24; u++) {
+                        double span = u / 22.0;
+                        double feather = AngelWingMotion.featherGrowth(span, progress);
+                        for (int v = 0; v <= 6; v++) {
+                            var p = forming.surface(span, v / 6.0 * feather);
+                            require(Double.isFinite(p.x()) && Double.isFinite(p.y()) && Double.isFinite(p.z()),
+                                "Growing wing geometry must stay finite");
+                            boolean torso = p.y() > -.25 && p.y() < 1.40
+                                && Math.abs(p.x()) < .26 && Math.abs(p.z()) < .13;
+                            double shaftZ = p.z() - .025;
+                            boolean arm = p.y() > -.06 && p.y() < .95 && Math.abs(p.x()) > .23
+                                && Math.abs(p.x()) < .58 && shaftZ > -.22 && shaftZ < .22;
+                            require(!torso && !arm, "Growing wings must clear the torso and arms");
+                        }
+                    }
+                    frames++;
+                }
+            }
             // At the server's damage frame, the upper edge must lead the feather fan into the sweep.
             double impact = 4.0 / 12;
             var strike = AngelWingMotion.sample(0, 0, 0, 0, 0, impact, pair);

@@ -1,4 +1,4 @@
-# WeaverLib 0.2.7
+# WeaverLib 0.2.8
 
 An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and Java 21. By Ex.
 
@@ -13,7 +13,7 @@ Progression is completed advancements plus Prime blessings. Existing angels beco
 
 Operators designate founding angels using `/weaverangel prime <player>`. This issues a token bound to that player; it does not bypass the 25-advancement entry requirement. Right-click another living angel with the token to grant **one progression point per Minecraft day**. Blessings are progression, not actual Minecraft advancement grants. The recipient’s new total cannot exceed the Prime’s current total, even within the same rank. Rejected blessings use no daily charge. The daily limit belongs to the Prime, so replacement or duplicate tokens do not bypass it. Progression, ownership and daily usage survive death and reconnecting. The day boundary uses the Overworld’s calendar, shared across dimensions.
 
-Press **V** to open the invocation wheel. Click **Sanctus** (Divinity) three times to transform. Repeat the sequence to revert. The other two sectors are **Pyra** (Inferno) and **Nemesis** (Retribution), reserved for the next ranks. Escape or V cancels an unfinished sequence. This is the only angel-specific keybind.
+Press **V** to open the invocation wheel. Click **Sanctus** (Divinity) three times to transform. The wings grow out from glowing points on the back over about 1.8 seconds: the inner wing extends first, then the wrists unfold and the outer feathers emerge. Orange embers and white-gold sparks follow their growth. Additional wing pairs emerge in a short stagger. This animation shares its server start time with other players and is dimmer outside sunlight. Repeat the sequence to revert. The other two sectors are **Pyra** (Inferno) and **Nemesis** (Retribution), reserved for the next ranks. Escape or V cancels an unfinished sequence. This is the only angel-specific keybind.
 
 Transformation costs 5 Grace when the combined energy supply can cover it. Sunlight waives this fee below 5 Grace to let an exhausted angel recover. Zero-energy transformation works under direct sunlight and immediately starts recovering energy. An attempt outside sunlight with insufficient combined energy produces a subdued flash and leaves you human. Human form never recharges. Angel form regenerates 2 Grace/second under direct daylight, up to 100. Angel form consumes 0.25/second. Slow flight adds 0.5/second and fast flight adds 2/second. Exhausting both the personal reserve and usable carried storage ends the transformation. Death, logout, dimension changes, and game-mode changes also restore human form and remove angelic flight privileges.
 

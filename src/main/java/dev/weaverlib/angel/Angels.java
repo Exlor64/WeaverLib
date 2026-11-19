@@ -67,6 +67,16 @@ public final class Angels {
         public static final View HUMAN = new View(0, 0, false, false, false, 0, 0, 0);
     }
 
+    public record Formation(long started, boolean dim) {
+        public static final Formation NONE = new Formation(-1, false);
+    }
+
+    private static final StreamCodec<io.netty.buffer.ByteBuf, Formation> FORMATION_CODEC = StreamCodec.composite(
+        ByteBufCodecs.VAR_LONG, Formation::started, ByteBufCodecs.BOOL, Formation::dim, Formation::new);
+    private static final DeferredHolder<AttachmentType<?>, AttachmentType<Formation>> FORMATION =
+        ATTACHMENTS.register("angel_formation", () -> AttachmentType.builder(() -> Formation.NONE)
+            .sync(FORMATION_CODEC).build());
+
     private static final StreamCodec<io.netty.buffer.ByteBuf, View> CODEC = StreamCodec.composite(
         ByteBufCodecs.VAR_INT, View::rank, ByteBufCodecs.VAR_INT, View::energy,
         ByteBufCodecs.VAR_INT, v -> (v.active() ? 1 : 0) | (v.fast() ? 2 : 0) | (v.defending() ? 4 : 0),
@@ -99,6 +109,10 @@ public final class Angels {
 
     public static View view(Player player) {
         return player.getExistingData(VIEW).orElse(View.HUMAN);
+    }
+
+    public static Formation formation(Player player) {
+        return player.getExistingData(FORMATION).orElse(Formation.NONE);
     }
 
     static CompoundTag data(ServerPlayer player) {
@@ -222,6 +236,7 @@ public final class Angels {
         saved.putBoolean("FlightGranted", true);
         saved.putBoolean("PreviousFlying", player.getAbilities().flying);
         saved.putFloat("PreviousFlySpeed", player.getAbilities().getFlyingSpeed());
+        player.setData(FORMATION, new Formation(player.serverLevel().getGameTime(), !sunlight));
         s.active = true;
         s.fast = false;
         s.level = player.serverLevel();
@@ -238,6 +253,7 @@ public final class Angels {
     }
 
     private static void revert(ServerPlayer player) {
+        player.setData(FORMATION, Formation.NONE);
         var s = player.getExistingData(SESSION).orElse(null);
         boolean wasActive = s != null && s.active;
         if (s != null) {

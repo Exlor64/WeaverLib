@@ -122,8 +122,12 @@ final class AngelClient {
             // Use the same wrapped skeleton as third person; first-person coordinates have +Y up.
             poses.translate(0, -.04, -.08);
             poses.scale(side * .85F, -.85F, .85F);
+            var formation = Angels.formation(player);
+            double growth = formation.started() < 0 ? 1 : AngelWingMotion.birthProgress(
+                player.level().getGameTime() + event.getPartialTick() - formation.started(), 0);
+            var joints = AngelWingMotion.sample(player.tickCount * .12, 0, 0, 0, guardPose, strike, 0, side);
             AngelWings.geometry(event.getMultiBufferSource().getBuffer(AngelMesh.layer()), poses,
-                AngelWingMotion.sample(player.tickCount * .12, 0, 0, 0, guardPose, strike, 0, side));
+                AngelWingMotion.growing(joints, growth));
             poses.popPose();
         }
     }
