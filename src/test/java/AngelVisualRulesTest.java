@@ -1,8 +1,6 @@
-import dev.weaverlib.client.AngelFlightFrame;
+import dev.weaverlib.client.AngelFlightMath;
+import dev.weaverlib.client.AngelFlightMath.Vector;
 import dev.weaverlib.client.AngelWingMotion;
-import net.minecraft.world.phys.Vec3;
-import org.joml.Matrix4f;
-import org.joml.Vector3f;
 
 /** Geometry regressions for body-relative effects and wing paths; no client or graphics context. */
 public final class AngelVisualRulesTest {
@@ -11,8 +9,20 @@ public final class AngelVisualRulesTest {
         if (!ok) throw new AssertionError(message);
     }
     private static boolean near(double a, double b) { return Math.abs(a - b) < 1e-5; }
-    private static boolean matches(Vector3f a, Vec3 b) {
-        return near(a.x, b.x) && near(a.y, b.y) && near(a.z, b.z);
+    private static boolean matches(Vector a, Vector b) {
+        return near(a.x(), b.x()) && near(a.y(), b.y()) && near(a.z(), b.z());
+    }
+    // Independently apply the renderer's local-Y roll, X pitch, then world-Y yaw to a model vector.
+    private static Vector modelDirection(Vector v, double yaw, double pitch, double roll) {
+        double x = v.x() * Math.cos(roll) + v.z() * Math.sin(roll);
+        double y = v.y();
+        double z = -v.x() * Math.sin(roll) + v.z() * Math.cos(roll);
+        double p = Math.toRadians(-90 - pitch);
+        double pitchedY = y * Math.cos(p) - z * Math.sin(p);
+        z = y * Math.sin(p) + z * Math.cos(p);
+        double heading = Math.toRadians(180 - yaw);
+        return new Vector(x * Math.cos(heading) + z * Math.sin(heading), pitchedY,
+            -x * Math.sin(heading) + z * Math.cos(heading));
     }
     public static void run() {
         for (int pair = 0; pair < 3; pair++) {
@@ -48,18 +58,16 @@ public final class AngelVisualRulesTest {
         for (double yaw : new double[]{0, 45, 90, 180, 270}) {
             for (double pitch : new double[]{-90, -60, 0, 35, 90}) {
                 for (double remaining : new double[]{0, 1.5, 8, 18}) {
-                    double roll = AngelFlightFrame.roll(remaining);
-                    var frame = AngelFlightFrame.of(yaw, pitch, roll);
+                    double roll = AngelFlightMath.roll(remaining);
+                    var frame = AngelFlightMath.of(yaw, pitch, roll);
                     require(near(frame.forward().dot(frame.right()), 0), "Forward/right must be orthogonal");
                     require(near(frame.up().lengthSqr(), 1), "Vertical dives need a stable circular frame");
-                    Matrix4f model = new Matrix4f().rotateY((float) Math.toRadians(180 - yaw))
-                        .rotateX((float) Math.toRadians(-90 - pitch)).rotateY((float) roll);
-                    require(matches(model.transformDirection(new Vector3f(0, 1, 0)), frame.forward()),
+                    require(matches(modelDirection(new Vector(0, 1, 0), yaw, pitch, roll), frame.forward()),
                         "Effect axis must match the renderer's diving body axis");
-                    require(matches(model.transformDirection(new Vector3f(-1, 0, 0)), frame.right()),
+                    require(matches(modelDirection(new Vector(-1, 0, 0), yaw, pitch, roll), frame.right()),
                         "Flame roll must match the player roll");
                     for (int i = 0; i < 16; i++) {
-                        var point = frame.point(Vec3.ZERO, .4, .55, i * Math.TAU / 16);
+                        var point = frame.point(Vector.ZERO, .4, .55, i * Math.TAU / 16);
                         require(near(point.dot(frame.forward()), .4), "Spiral escaped its axial plane");
                         require(near(point.subtract(frame.forward().scale(.4)).lengthSqr(), .55 * .55),
                             "Spiral must encircle the diving body at a constant radius");
@@ -68,7 +76,7 @@ public final class AngelVisualRulesTest {
                 }
             }
         }
-        require(AngelFlightFrame.roll(-1) == 0, "An expired attack must not keep rolling");
+        require(AngelFlightMath.roll(-1) == 0, "An expired attack must not keep rolling");
         System.out.println("Passed angel visual geometry checks across " + frames + " animation and flight frames.");
     }
     public static void main(String[] args) { run(); }

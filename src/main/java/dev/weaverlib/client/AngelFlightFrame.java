@@ -5,17 +5,16 @@ import net.minecraft.world.phys.Vec3;
 /** The same yaw, pitch and longitudinal roll used by the diving player renderer. */
 public record AngelFlightFrame(Vec3 forward, Vec3 right, Vec3 up) {
     public static double roll(double remainingSpinTicks) {
-        return Math.max(0, remainingSpinTicks) * Math.PI / 3;
+        return AngelFlightMath.roll(remainingSpinTicks);
     }
 
     public static AngelFlightFrame of(double yaw, double pitch, double roll) {
-        double y = Math.toRadians(yaw), p = Math.toRadians(pitch);
-        Vec3 forward = new Vec3(-Math.sin(y) * Math.cos(p), -Math.sin(p), Math.cos(y) * Math.cos(p));
-        Vec3 right = new Vec3(Math.cos(y), 0, Math.sin(y));
-        Vec3 up = forward.cross(right);
-        return new AngelFlightFrame(forward,
-            right.scale(Math.cos(roll)).add(up.scale(Math.sin(roll))),
-            up.scale(Math.cos(roll)).subtract(right.scale(Math.sin(roll))));
+        var basis = AngelFlightMath.of(yaw, pitch, roll);
+        return new AngelFlightFrame(vector(basis.forward()), vector(basis.right()), vector(basis.up()));
+    }
+
+    private static Vec3 vector(AngelFlightMath.Vector v) {
+        return new Vec3(v.x(), v.y(), v.z());
     }
 
     public Vec3 point(Vec3 center, double axial, double radius, double angle) {
