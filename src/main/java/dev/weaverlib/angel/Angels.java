@@ -10,7 +10,6 @@ import java.util.UUID;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -350,10 +349,6 @@ public final class Angels {
         if (s.fast && s.spinUntil > now) spinCollision(player, s);
         if (s.fast) {
             accelerate(player, s.spinUntil > now);
-            if (player.tickCount % 2 == 0) {
-                var at = player.position().add(0, .8, 0);
-                player.serverLevel().sendParticles(ParticleTypes.FLAME, at.x, at.y, at.z, 2, .2, .2, .2, .005);
-            }
         }
         if (energy(player) <= 0 && !AngelFuel.pay(player, AngelEnergy.upkeep(false, false), false)) revert(player);
         else sync(player);
@@ -526,8 +521,59 @@ public final class Angels {
         if (e.getEntity() instanceof ServerPlayer p) revert(p);
     }
 
+    private static int setStage(ServerPlayer player, int stage) {
+        var saved = data(player);
+        int previous = rank(player);
+        double reserve = energy(player);
+        if (!saved.contains("StageOverride")) saved.putInt("StageSavedRank", previous);
+        saved.putInt("StageOverride", stage);
+        saved.putInt("Rank", stage);
+        setEnergy(player, previous == 0 ? AngelEnergy.capacity(stage) : reserve);
+        sync(player);
+        player.sendSystemMessage(Component.translatable("weaverlib.angel.stage_set",
+            Component.translatable("weaverlib.angel.rank." + stage)));
+        return 1;
+    }
+
+    private static int automaticStage(ServerPlayer player) {
+        var saved = data(player);
+        if (saved.contains("StageOverride")) {
+            int previous = saved.getInt("StageSavedRank");
+            double reserve = energy(player);
+            saved.remove("StageOverride");
+            saved.remove("StageSavedRank");
+            int natural = previous > 0 || AngelProgress.advancements(player) >= AngelLevels.ENTRY
+                ? Math.max(previous, AngelLevels.rankAt(AngelProgress.points(player))) : 0;
+            if (natural == 0) revert(player);
+            saved.putInt("Rank", natural);
+            setEnergy(player, reserve);
+            sync(player);
+        }
+        player.sendSystemMessage(Component.translatable("weaverlib.angel.stage_auto"));
+        return 1;
+    }
+
+    private static com.mojang.brigadier.builder.LiteralArgumentBuilder<net.minecraft.commands.CommandSourceStack>
+            stageCommands() {
+        var command = Commands.literal("stage").requires(source -> source.hasPermission(2));
+        String[] stages = {"angel", "archangel", "seraphim"};
+        for (int i = 0; i < stages.length; i++) {
+            int stage = i + 1;
+            command.then(Commands.literal(stages[i])
+                .executes(ctx -> setStage(ctx.getSource().getPlayerOrException(), stage))
+                .then(Commands.argument("player", EntityArgument.player())
+                    .executes(ctx -> setStage(EntityArgument.getPlayer(ctx, "player"), stage))));
+        }
+        command.then(Commands.literal("auto")
+            .executes(ctx -> automaticStage(ctx.getSource().getPlayerOrException()))
+            .then(Commands.argument("player", EntityArgument.player())
+                .executes(ctx -> automaticStage(EntityArgument.getPlayer(ctx, "player")))));
+        return command;
+    }
+
     private static void commands(RegisterCommandsEvent e) {
         e.getDispatcher().register(Commands.literal("weaverangel")
+            .then(stageCommands())
             .then(Commands.literal("status").executes(ctx -> {
                 AngelProgress.status(ctx.getSource().getPlayerOrException());
                 return 1;
@@ -556,6 +602,8 @@ public final class Angels {
                 revert(p);
                 data(p).putInt("Rank", 0);
                 data(p).remove("Prime");
+                data(p).remove("StageOverride");
+                data(p).remove("StageSavedRank");
                 setEnergy(p, 0);
                 sync(p);
                 return 1;

@@ -1,4 +1,4 @@
-# WeaverLib 0.2.1
+# WeaverLib 0.2.2
 
 An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and Java 21. By Ex.
 
@@ -17,9 +17,13 @@ Press **V** to open the invocation wheel. Click **Sanctus** (Divinity) three tim
 
 Transformation costs 5 Grace when the combined energy supply can cover it. Sunlight waives this fee below 5 Grace to let an exhausted angel recover. Zero-energy transformation works under direct sunlight and immediately starts recovering energy. An attempt outside sunlight with insufficient combined energy produces a subdued flash and leaves you human. Human form never recharges. Angel form regenerates 2 Grace/second under direct daylight, up to 100. Angel form consumes 0.25/second. Slow flight adds 0.5/second and fast flight adds 2/second. Exhausting both the personal reserve and usable carried storage ends the transformation. Death, logout, dimension changes, and game-mode changes also restore human form and remove angelic flight privileges.
 
+Wings use articulated shoulders, elbows and wrists with delayed feather motion, an extended power stroke and folded recovery. Blocking curls the outer feathers around the chest; ground attacks wind up and sweep outside the body. Fast-flight spin effects use the same diving body frame as the player, with layered gold and orange flame ribbons spiraling along the head-to-feet axis.
+
 In angel form, double-tap jump for slow creative-style flight. Tap the normal sprint key while airborne to switch between slow and fast flight. Fast flight steers like continuously boosted Elytra flight and ends on landing or entering water.
 
 All mouse abilities require an empty main hand. While grounded, left-click performs a randomized wing sweep for 2 Grace, and holding right-click crosses the wings as a directional shield. Blocking starts after five ticks, costs one Grace per prevented damage point, respects shield-bypassing attacks and piercing arrows, and axes disable it for five seconds. During slow flight, left-click launches a light feather for 3 Grace. Hold right-click to repel every nearby entity type within 4.5 blocks, including projectiles and minecarts, for one Grace per entity per second. During fast flight, left-click spends 10 Grace on a spinning charge with collision damage. Hold right-click for a luminous mantle that reduces damage by 75% and spends one Grace per prevented damage point. An unaffordable action spends nothing and has no effect.
+
+Operators can directly select `/weaverangel stage angel`, `/weaverangel stage archangel`, or `/weaverangel stage seraphim`; append a player name to target someone else. These testing overrides bypass the entry requirement and persist across reconnects. Use `/weaverangel stage auto [player]` to restore natural progression; a previously human tester below the entry requirement returns to human. Changing an existing angel’s stage keeps and clamps their Grace rather than refilling it. A human entering a testing stage starts full. `/weaverangel status` identifies an active override.
 
 Operators can use `/weaverangel refill`, `/weaverangel energy <amount>`, and `/weaverangel remove` for testing. Angelic energy is stored separately from Thaumaturge Vis and Goety Soul Energy. The previous Sol-specific Warp purification and casting penalties have been retired. Embers Re-Ignited is supported as an optional external fuel source.
 

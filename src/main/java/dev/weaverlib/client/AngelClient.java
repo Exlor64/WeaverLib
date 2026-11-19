@@ -118,13 +118,12 @@ final class AngelClient {
         for (int side = -1; side <= 1; side += 2) {
             poses.pushPose();
             boolean strikingWing = (Angels.view(player).wing() % 2 == 0 ? -1 : 1) == side;
-            float movement = strikingWing ? sweep : 0;
-            poses.translate(side * .37, -.52 + (1 - guardPose) * .65 - movement * .2, -.86);
-            poses.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(side * (37 * guardPose - movement * 65)));
-            poses.mulPose(com.mojang.math.Axis.YP.rotationDegrees(side * (-14 * guardPose + movement * 70)));
-            poses.scale(side * .6F, .6F, .6F);
+            double strike = strikingWing && sweep > 0 ? attack : -1;
+            // Use the same wrapped skeleton as third person; first-person coordinates have +Y up.
+            poses.translate(0, -.04, -.08);
+            poses.scale(side * .85F, -.85F, .85F);
             AngelWings.geometry(event.getMultiBufferSource().getBuffer(AngelMesh.layer()), poses,
-                player.tickCount + event.getPartialTick(), .55F, 1);
+                AngelWingMotion.sample(player.tickCount * .12, 0, 0, 0, guardPose, strike, 0));
             poses.popPose();
         }
     }

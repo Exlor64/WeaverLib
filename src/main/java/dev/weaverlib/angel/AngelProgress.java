@@ -49,7 +49,7 @@ public final class AngelProgress {
 
     static void refresh(ServerPlayer player) {
         int current = Angels.rank(player);
-        if (current == 0) return;
+        if (current == 0 || Angels.data(player).contains("StageOverride")) return;
         int total = points(player);
         int rank = Math.max(current, AngelLevels.rankAt(total));
         if (rank > current) {
@@ -118,5 +118,8 @@ public final class AngelProgress {
         int bonus = Math.max(0, Angels.data(player).getInt("Blessings"));
         player.sendSystemMessage(Component.translatable("weaverlib.angel.progress", completed, bonus,
             AngelLevels.points(completed, bonus), Component.translatable("weaverlib.angel.rank." + Angels.rank(player))));
+        if (Angels.data(player).contains("StageOverride")) {
+            player.sendSystemMessage(Component.translatable("weaverlib.angel.stage_override"));
+        }
     }
 }

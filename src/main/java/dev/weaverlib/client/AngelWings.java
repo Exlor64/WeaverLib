@@ -2,122 +2,126 @@ package dev.weaverlib.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Axis;
 import dev.weaverlib.angel.Angels;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import net.minecraft.client.model.PlayerModel;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
-import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 
 final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> {
-    private final java.util.Map<java.util.UUID, Guard> guards = new java.util.HashMap<>();
+    private final Map<UUID, Motion> motions = new HashMap<>();
+    private ClientLevel world;
 
-    private record Guard(float amount, double lastTime) {}
-
-    AngelWings(PlayerRenderer renderer) {
-        super(renderer);
+    private static final class Motion {
+        double lastTime, phase, flight, fast, effort = .7, guard, previousSpeed;
+        Motion(double time) { lastTime = time; }
     }
+
+    AngelWings(PlayerRenderer renderer) { super(renderer); }
 
     @Override
     public void render(PoseStack pose, MultiBufferSource buffers, int light, AbstractClientPlayer player,
             float swing, float speed, float partial, float age, float yaw, float pitch) {
         var view = Angels.view(player);
-        if (!view.active() || !player.isAlive() || player.isInvisible()) return;
+        if (!view.active() || !player.isAlive() || player.isInvisible()) {
+            motions.remove(player.getUUID());
+            return;
+        }
+        if (world != player.level()) {
+            motions.clear();
+            world = (ClientLevel) player.level();
+        }
         double time = player.level().getGameTime() + partial;
-        float flap = flap(player, age);
-        float desired = view.defending() && !Angels.flying(player) ? 1 : 0;
-        Guard previous = guards.get(player.getUUID());
-        double elapsed = previous == null ? 1 : Math.clamp(time - previous.lastTime(), 0, 5);
-        float guard = previous == null ? 0 : previous.amount();
-        guard = Mth.lerp((float) Math.min(1, elapsed / 3), guard, desired);
-        if (guards.size() > 128) guards.clear();
-        guards.put(player.getUUID(), new Guard(guard, time));
-        float attack = (float) ((time - view.swing()) / 12.0);
+        if (motions.size() > 128) motions.clear();
+        Motion m = motions.computeIfAbsent(player.getUUID(), id -> new Motion(time));
+        double elapsed = Math.clamp(time - m.lastTime, 0, 3);
+        m.lastTime = time;
+        double velocity = player.getDeltaMovement().length();
+        double acceleration = elapsed > .001 ? (velocity - m.previousSpeed) / elapsed : 0;
+        m.previousSpeed = velocity;
+        boolean flying = Angels.flying(player);
+        double effort = view.fast() ? Math.clamp(.18 + Math.max(0, -player.getXRot()) / 65
+            + Math.max(0, 1.15 - velocity) * .65 + Math.max(0, acceleration) * 5, .08, 1) : .88;
+        double blend = 1 - Math.exp(-elapsed / 4);
+        m.effort += (effort - m.effort) * blend;
+        m.flight += ((flying ? 1 : 0) - m.flight) * blend;
+        m.fast += ((view.fast() ? 1 : 0) - m.fast) * blend;
+        m.guard += ((view.defending() && !flying ? 1 : 0) - m.guard) * (1 - Math.exp(-elapsed / 2.2));
+        // Integrating phase prevents animation jumps when speed or flight mode changes.
+        m.phase = (m.phase + elapsed * (.075 + m.flight * (.215 + m.effort * .13))) % Math.TAU;
+        double attack = (time - view.swing()) / 12;
         pose.pushPose();
         getParentModel().body.translateAndRotate(pose);
+        var buffer = buffers.getBuffer(AngelMesh.layer());
         for (int pair = 0; pair < view.rank(); pair++) {
             for (int side = -1; side <= 1; side += 2) {
+                double strike = view.wing() == pair * 2 + (side > 0 ? 1 : 0) ? attack : -1;
+                var joints = AngelWingMotion.sample(m.phase, m.flight, m.fast, m.effort, m.guard, strike, pair);
                 pose.pushPose();
-                pose.translate(side * .15, .19 + pair * .24, .17);
-                if (pair > 0) pose.mulPose(Axis.ZP.rotationDegrees(side * (pair == 1 ? 25 : -24)));
-                pose.scale(1 - pair * .11F, 1 - pair * .11F, 1);
-                float slash = view.wing() == pair * 2 + (side > 0 ? 1 : 0)
-                    && attack >= 0 && attack < 1 ? Mth.sin(attack * Mth.PI) : 0;
-                pose.mulPose(Axis.YP.rotationDegrees(side * (-14 + guard * 109 + slash * 128)));
-                pose.mulPose(Axis.ZP.rotationDegrees(side * (flap * (1 - guard) - guard * 25 - slash * 14)));
-                pose.mulPose(Axis.XP.rotationDegrees(guard * 22));
                 pose.scale(side, 1, 1);
-                float fold = Math.max(0, -flap) / 45;
-                geometry(buffers.getBuffer(AngelMesh.layer()), pose, age, fold, guard);
+                geometry(buffer, pose, joints);
                 pose.popPose();
             }
         }
         pose.popPose();
     }
 
-    private static float flap(AbstractClientPlayer player, float age) {
-        var view = Angels.view(player);
-        double vertical = player.getDeltaMovement().y;
-        if (!Angels.flying(player)) return Mth.sin(age * .09F) * 3;
-        if (!view.fast()) return Mth.sin(age * .65F) * 32 + (float) Math.clamp(-vertical * 12, -8, 8);
-        double pitch = player.getXRot();
-        double speed = player.getDeltaMovement().length();
-        double effort = Math.clamp((pitch < 0 ? -pitch / 55 : 0) + (1.05 - speed) * 1.6, .08, 1);
-        return (float) (Mth.sin(age * (.35F + (float) effort * .27F)) * (8 + effort * 27) - 10);
+    static void geometry(VertexConsumer buffer, PoseStack pose, AngelWingMotion.Joints joints) {
+        // Long primaries fan from the wrist; shorter overlapping rows fill the arm and cover the roots.
+        for (int i = 0; i < 12; i++) {
+            double u = .40 + i * .056;
+            double length = .93 - i * .026;
+            feather(buffer, pose.last(), joints, u, .04, .055, length, .055 + i * .004,
+                i % 2 == 0 ? 0xFFF4C6 : 0xFFE3A2);
+        }
+        for (int i = 0; i < 11; i++) {
+            double u = .025 + i * .052;
+            feather(buffer, pose.last(), joints, u, .015, .048, .84 + u * .22, .025, 0xFFEAB0);
+        }
+        for (int row = 0; row < 2; row++) {
+            for (int i = 0; i < 13; i++) {
+                double u = .018 + i * .075;
+                feather(buffer, pose.last(), joints, u, -.035 + row * .11, .045,
+                    .38 + row * .10, .012, row == 0 ? 0xFFF9DE : 0xF9D58D);
+            }
+        }
     }
 
-    static void geometry(VertexConsumer buffer, PoseStack pose, float age, float fold, float guard) {
-        // The shoulder drives the upper wing. The elbow folds the forewing on the recovery stroke.
-        feather(buffer, pose.last(), new Vec3(0, 0, 0), new Vec3(.86, -.35, .08), .16, 0xF3BA59);
-        for (int i = 0; i < 7; i++) {
-            double f = i / 6.0;
-            Vec3 root = new Vec3(.07 + f * .67, -.03 - f * .29, .035);
-            Vec3 tip = root.add(.04 + .13 * f, .59 + .16 * f, .10);
-            feather(buffer, pose.last(), root, tip, .115, i % 2 == 0 ? 0xFFF0B8 : 0xF4D482);
-        }
-        pose.pushPose();
-        pose.translate(.78, -.31, .07);
-        pose.mulPose(Axis.YP.rotationDegrees(-fold * 38));
-        pose.mulPose(Axis.ZP.rotationDegrees(-fold * 18 + Mth.sin(age * .13F) * 2));
-        pose.pushPose();
-        pose.translate(.30, -.12, .025);
-        pose.mulPose(Axis.YP.rotationDegrees(-fold * 21));
-        pose.mulPose(Axis.ZP.rotationDegrees(fold * 12));
-        for (int i = 0; i < 9; i++) {
-            double f = i / 8.0;
-            Vec3 root = new Vec3(f * .70 - .30, -f * .27 + .12, f * .10 - .025);
-            Vec3 tip = root.add(.28 + f * .28, .72 - f * .45, .10 + f * .08);
-            feather(buffer, pose.last(), root, tip, .12 - f * .035, i % 2 == 0 ? 0xFFF6D1 : 0xFBDD99);
-        }
-        pose.popPose();
-        for (int i = 0; i < 8; i++) {
-            double f = i / 7.0;
-            Vec3 root = new Vec3(f * .80, -f * .31, -.02);
-            feather(buffer, pose.last(), root, root.add(.23, .34 - f * .12, .12), .09, 0xFFE7A6);
-        }
-        pose.popPose();
+    private static Vec3 point(AngelWingMotion.Joints joints, double u, double v, double ridge) {
+        var p = joints.surface(u, v);
+        return new Vec3(p.x(), p.y(), p.z() - ridge);
     }
 
-    private static void feather(VertexConsumer buffer, PoseStack.Pose pose, Vec3 root, Vec3 tip,
-            double width, int color) {
-        Vec3 direction = tip.subtract(root);
-        Vec3 across = new Vec3(direction.y, -direction.x, 0).normalize().scale(width);
-        Vec3 middle = root.lerp(tip, .38).add(0, 0, .04);
-        Vec3 taper = root.lerp(tip, .78);
-        Vec3 left = middle.add(across);
-        Vec3 right = middle.subtract(across);
-        Vec3 leftTip = taper.add(across.scale(.56));
-        Vec3 rightTip = taper.subtract(across.scale(.56));
-        AngelMesh.quad(buffer, pose, 0xFFD16B, 0, .16F, 0, .16F,
-            root, middle.add(across.scale(1.38)), tip, middle.subtract(across.scale(1.38)));
-        AngelMesh.quad(buffer, pose, color, .89F, .96F, .85F, .94F, root, left, leftTip, taper);
-        AngelMesh.quad(buffer, pose, AngelMesh.mix(color, 0xC58437, .18F),
-            .89F, .94F, .86F, .92F, root, middle, rightTip, right);
-        AngelMesh.quad(buffer, pose, color, .96F, .85F, .51F, .85F, taper, leftTip, tip, rightTip);
-        AngelMesh.quad(buffer, pose, 0xFFF9E8, .55F, .82F, .43F, .66F,
-            root, middle.add(across.scale(.12)), tip, taper.subtract(across.scale(.10)));
+    private static void feather(VertexConsumer buffer, PoseStack.Pose pose, AngelWingMotion.Joints joints,
+            double u, double start, double width, double length, double lean, int color) {
+        // Five tapered sections make each feather bend with the wing and give it a curved luminous edge.
+        for (int band = 0; band < 5; band++) {
+            double a = band / 5.0, b = (band + 1) / 5.0;
+            double centerA = u + lean * a * a, centerB = u + lean * b * b;
+            double wA = width * Math.sin(Math.PI * Math.pow(a, .65));
+            double wB = width * Math.sin(Math.PI * Math.pow(b, .65));
+            double vA = start + length * a, vB = start + length * b;
+            Vec3 leftA = point(joints, centerA - wA, vA, .012);
+            Vec3 rightA = point(joints, centerA + wA, vA, .012);
+            Vec3 leftB = point(joints, centerB - wB, vB, .012);
+            Vec3 rightB = point(joints, centerB + wB, vB, .012);
+            AngelMesh.quad(buffer, pose, color, .92F, .92F, .84F, .84F, leftA, rightA, rightB, leftB);
+            AngelMesh.quad(buffer, pose, 0xFFFBEA, .72F, .72F, .48F, .48F,
+                point(joints, centerA - .004, vA, .025), point(joints, centerA + .004, vA, .025),
+                point(joints, centerB + .003, vB, .025), point(joints, centerB - .003, vB, .025));
+            // A narrow, fading gold fringe avoids the old solid diamond-shaped glow cards.
+            AngelMesh.quad(buffer, pose, 0xFFB63E, .20F, 0, 0, .16F,
+                leftA, point(joints, centerA - wA - .016, vA, .006),
+                point(joints, centerB - wB - .012, vB, .006), leftB);
+            AngelMesh.quad(buffer, pose, 0xFFB63E, .20F, 0, 0, .16F,
+                rightA, point(joints, centerA + wA + .016, vA, .006),
+                point(joints, centerB + wB + .012, vB, .006), rightB);
+        }
     }
 }

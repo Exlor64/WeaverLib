@@ -115,5 +115,8 @@
   "weaverlib.angel.token_unbound": "Unbound — only an appointed Prime’s token can bless.",
   "weaverlib.angel.token_hint": "Right-click another angel: +1 progression, once per Minecraft day.",
   "weaverlib.angel.token_limit": "A blessing cannot raise its recipient above your progression.",
-  "weaverlib.angel.entry_requirement": "You have %s completed advancements. Becoming an angel requires %s."
+  "weaverlib.angel.entry_requirement": "You have %s completed advancements. Becoming an angel requires %s.",
+  "weaverlib.angel.stage_set": "Testing stage set to %s. Use /weaverangel stage auto to restore natural progression.",
+  "weaverlib.angel.stage_auto": "Angel stage now follows natural progression.",
+  "weaverlib.angel.stage_override": "An operator stage override is active. Natural advancement promotion is paused."
 }

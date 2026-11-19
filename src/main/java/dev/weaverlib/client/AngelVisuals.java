@@ -82,23 +82,76 @@ final class AngelVisuals {
             if (!view.active() || player.isInvisible() || player.distanceToSqr(camera) > 64 * 64) continue;
             Vec3 center = player.getPosition(partial).subtract(camera);
             float time = player.tickCount + partial;
-            if (view.defending() && Angels.flying(player)) {
-                float radius = view.fast() ? .75F : 2.1F;
+            if (view.defending() && Angels.flying(player) && !view.fast()) {
                 for (int i = 0; i < 3; i++) {
                     double phase = (time * .075 + i / 3.0) % 1;
                     ring(buffer, pose, center.add(0, .15 + phase, 0),
-                        radius * (.4 + phase), (float) ((1-phase) * .52));
+                        2.1 * (.4 + phase), (float) ((1-phase) * .52));
                 }
             }
             if (view.fast() && (view.defending() || view.spin() > tick)) {
-                for (int i = 0; i < 10; i++) {
-                    double angle = time * .27 + i * Math.TAU / 10;
-                    Vec3 at = center.add(Math.cos(angle) * .53, .3 + (i % 4) * .35, Math.sin(angle) * .53);
-                    flame(buffer, pose, at, .14, .45 + Mth.sin(time * .3F + i) * .12, .74F);
-                }
+                double remaining = view.spin() - tick - partial;
+                var frame = AngelFlightFrame.of(player.getViewYRot(partial), player.getViewXRot(partial),
+                    AngelFlightFrame.roll(remaining));
+                // The renderer lays the body forward from its feet; its center is along that axis.
+                Vec3 body = center.add(frame.forward().scale(.82 * player.getScale()));
+                spiral(buffer, pose, frame, body, time, remaining > 0, player.getScale());
             }
         }
         client.renderBuffers().bufferSource().endBatch(AngelMesh.layer());
+    }
+
+    private static void spiral(VertexConsumer buffer, PoseStack.Pose pose, AngelFlightFrame frame,
+            Vec3 center, float time, boolean spinning, float scale) {
+        double length = spinning ? 2.65 : 1.9;
+        double phase = spinning ? 0 : -time * .20;
+        int strands = spinning ? 3 : 4;
+        for (int strand = 0; strand < strands; strand++) {
+            double offset = strand * Math.TAU / strands + phase;
+            for (int segment = 0; segment < 26; segment++) {
+                double a = segment / 26.0, b = (segment + 1) / 26.0;
+                double axialA = (.83 - a * length) * scale, axialB = (.83 - b * length) * scale;
+                double angleA = offset + a * 7.7, angleB = offset + b * 7.7;
+                double radiusA = (.35 + .19 * Math.sin(a * Math.PI) + .12 * a) * scale;
+                double radiusB = (.35 + .19 * Math.sin(b * Math.PI) + .12 * b) * scale;
+                double flicker = .86 + .14 * Math.sin(time * .61 + strand * 2 + a * 19);
+                double widthA = Math.sin(a * Math.PI) * (.13 + .035 * flicker);
+                double widthB = Math.sin(b * Math.PI) * (.13 + .035 * flicker);
+                float alpha = (float) (Math.sin(a * Math.PI) * (spinning ? .88 : .67));
+                // Soft ember edge, gold flame body and thin white-hot filament, all in the flight frame.
+                ribbon(buffer, pose, frame, center, axialA, axialB, radiusA, radiusB,
+                    angleA, angleB, widthA * 2.3, widthB * 2.3, 0xED6A16, alpha * .17F);
+                ribbon(buffer, pose, frame, center, axialA, axialB, radiusA, radiusB,
+                    angleA, angleB, widthA, widthB, 0xFFB83B, alpha);
+                ribbon(buffer, pose, frame, center, axialA, axialB, radiusA - .012, radiusB - .012,
+                    angleA, angleB, widthA * .26, widthB * .26, 0xFFF7D2, alpha * .94F);
+            }
+            // Curved flame tongues peel off behind the wings instead of rising vertically.
+            for (int tongue = 0; tongue < 3; tongue++) {
+                double progress = (time * .045 + tongue / 3.0 + strand * .13) % 1;
+                double axial = (.35 - progress * 1.65) * scale;
+                double angle = offset + progress * 7.7;
+                Vec3 root = frame.point(center, axial, .51 * scale, angle);
+                Vec3 tip = frame.point(center, axial - (.35 + progress * .3) * scale,
+                    (.53 + progress * .25) * scale, angle - .25);
+                Vec3 across = frame.right().scale(-Math.sin(angle) * .075 * scale)
+                    .add(frame.up().scale(Math.cos(angle) * .075 * scale));
+                Vec3 shoulder = root.lerp(tip, .30);
+                float alpha = (float) ((1 - progress) * .78);
+                AngelMesh.quad(buffer, pose, 0xFFB348, 0, alpha, 0, alpha,
+                    root, shoulder.add(across), tip, shoulder.subtract(across));
+            }
+        }
+    }
+
+    private static void ribbon(VertexConsumer buffer, PoseStack.Pose pose, AngelFlightFrame frame, Vec3 center,
+            double axialA, double axialB, double radiusA, double radiusB, double angleA, double angleB,
+            double widthA, double widthB, int color, float alpha) {
+        AngelMesh.quad(buffer, pose, color, alpha, alpha, alpha * .94F, alpha * .94F,
+            frame.point(center, axialA, radiusA, angleA - widthA),
+            frame.point(center, axialA, radiusA, angleA + widthA),
+            frame.point(center, axialB, radiusB, angleB + widthB),
+            frame.point(center, axialB, radiusB, angleB - widthB));
     }
 
     private static void ring(VertexConsumer buffer, PoseStack.Pose pose, Vec3 center, double radius, float alpha) {

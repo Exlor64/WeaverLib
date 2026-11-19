@@ -68,5 +68,6 @@ public final class AngelRulesTest {
         check(AngelPayment.spend(0, 1, 0, List.of(a), true) < 0);
         check(AngelPayment.spend(0, 1, 100, List.of(), true) < 0);
         System.out.println("Passed " + checks + " angel progression and payment checks.");
+        AngelVisualRulesTest.run();
     }
 }
