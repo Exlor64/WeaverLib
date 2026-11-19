@@ -52,7 +52,7 @@ public final class AngelWingMotion {
                 dz = dz * cosine + (tx * dy - ty * dx) * sine + tz * along;
                 dx = rolledX; dy = rolledY;
             }
-            return clearBody(new Point(x + dx, y + dy, z + dz));
+            return clearArms(clearBody(new Point(x + dx, y + dy, z + dz)), span);
         }
     }
 
@@ -122,8 +122,10 @@ public final class AngelWingMotion {
         }
         // Curl around the shoulders, then cross the centerline at opposing angles. A small depth
         // separation layers the two wings instead of letting their luminous surfaces intersect.
-        elbow = elbow.blend(new Point(.74, root.y - .10, -.29), guard);
-        wrist = wrist.blend(new Point(.60, root.y - .15 - side * .11, -.73), guard);
+        // The elbow first swings behind and outside the entire arm, not through the shoulder.
+        // Only the outer forewing turns forward to cross in front of the chest.
+        elbow = elbow.blend(new Point(.88, root.y - .10, .22), guard);
+        wrist = wrist.blend(new Point(.72, root.y - .15 - side * .11, -.78), guard);
         tip = tip.blend(new Point(-.34, root.y + .02 - side * .28, -.92 - pair * .035 - side * .04), guard);
         return new Joints(root, clearBody(elbow), clearBody(wrist), clearBody(tip), recovery * amplitude, guard,
             strikeRoll);
@@ -144,6 +146,19 @@ public final class AngelWingMotion {
         // clear its sides. The back margin also allows for the feather's raised luminous shaft.
         if (p.y > -.3 && p.y < 1.45 && Math.abs(p.x) < .32 && p.z > -.25 && p.z < .15) {
             return new Point(.32, p.y, p.z);
+        }
+        return p;
+    }
+
+    private static Point clearArms(Point p, double span) {
+        // Include arms and sleeves, plus clearance for the feather's raised luminous shaft.
+        // Keep root feathers behind the arm, the elbow outside it, and crossed primaries in front.
+        // Applying the same clearance at rest avoids a jump as blocking starts or finishes.
+        double x = Math.abs(p.x);
+        if (p.y > -.12 && p.y < 1.02 && x > .23 && x < .64 && p.z > -.32 && p.z < .30) {
+            if (span <= 1.0 / 3) return new Point(p.x, p.y, .34);
+            if (span < .56) return new Point(Math.copySign(.70, p.x), p.y, p.z);
+            return new Point(p.x, p.y, -.38);
         }
         return p;
     }

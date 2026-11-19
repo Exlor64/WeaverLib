@@ -33,7 +33,7 @@ public final class AngelVisualRulesTest {
             require(opposite.tip().y() - guard.tip().y() > .4, "Guard wings need opposing crossing angles");
             require(Math.abs(opposite.tip().z() - guard.tip().z()) > .05, "Crossed wings need depth separation");
             require(guard.root().x() < .25 && guard.root().z() <= .17, "Wing roots must sit close to the back");
-            require(guard.elbow().x() > .7 && guard.elbow().z() < -.2, "Elbow must clear the shoulder");
+            require(guard.elbow().x() > .8 && guard.elbow().z() > .18, "Guard elbow must pass behind and outside the arm");
             // At the server's damage frame, the upper edge must lead the feather fan into the sweep.
             double impact = 4.0 / 12;
             var strike = AngelWingMotion.sample(0, 0, 0, 0, 0, impact, pair);
@@ -60,6 +60,11 @@ public final class AngelVisualRulesTest {
                                 boolean torso = p.y() > -.25 && p.y() < 1.40
                                     && Math.abs(p.x()) < .26 && Math.abs(p.z()) < .13;
                                 require(!torso, "Wing crossed torso during mode " + mode + " frame " + frame);
+                                // Include sleeves and the feather shaft's .025-block surface offset.
+                                double shaftZ = p.z() - .025;
+                                boolean arm = p.y() > -.06 && p.y() < .95 && Math.abs(p.x()) > .23
+                                    && Math.abs(p.x()) < .58 && shaftZ > -.22 && shaftZ < .22;
+                                require(!arm, "Wing crossed an arm during mode " + mode + " frame " + frame);
                             }
                         }
                         frames++;

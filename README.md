@@ -1,4 +1,4 @@
-# WeaverLib 0.2.5
+# WeaverLib 0.2.6
 
 An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and Java 21. By Ex.
 
@@ -17,7 +17,7 @@ Press **V** to open the invocation wheel. Click **Sanctus** (Divinity) three tim
 
 Transformation costs 5 Grace when the combined energy supply can cover it. Sunlight waives this fee below 5 Grace to let an exhausted angel recover. Zero-energy transformation works under direct sunlight and immediately starts recovering energy. An attempt outside sunlight with insufficient combined energy produces a subdued flash and leaves you human. Human form never recharges. Angel form regenerates 2 Grace/second under direct daylight, up to 100. Angel form consumes 0.25/second. Slow flight adds 0.5/second and fast flight adds 2/second. Exhausting both the personal reserve and usable carried storage ends the transformation. Death, logout, dimension changes, and game-mode changes also restore human form and remove angelic flight privileges.
 
-Wings use articulated shoulders, elbows and wrists with delayed feather motion, an extended power stroke and folded recovery. Creative-flight hovering flaps 30% slower than the initial cadence; ascending smoothly speeds it up and descending slows it down (up to 40% either way). Wing roots sit close to the back. Blocking curls the outer feathers around the chest and crosses the wings in an overlapping X; ground attacks wind up and sweep outside the body. During a melee strike, the wing twists so its upper leading edge makes contact first and its feathers trail behind, then untwists during recovery. Fast-flight spin effects use the same diving body frame as the player, with layered gold and orange flame ribbons spiraling along the head-to-feet axis.
+Wings use articulated shoulders, elbows and wrists with delayed feather motion, an extended power stroke and folded recovery. Creative-flight hovering flaps 30% slower than the initial cadence; ascending smoothly speeds it up and descending slows it down (up to 40% either way). Wing roots sit close to the back. Blocking routes the inner wings behind and outside the arms and sleeves before curling the outer feathers forward into an overlapping X across the chest; ground attacks wind up and sweep outside the body. During a melee strike, the wing twists so its upper leading edge makes contact first and its feathers trail behind, then untwists during recovery. Fast-flight spin effects use the same diving body frame as the player, with layered gold and orange flame ribbons spiraling along the head-to-feet axis.
 
 In angel form, double-tap jump for slow creative-style flight. Tap the normal sprint key while airborne to switch between slow and fast flight. Fast flight steers like continuously boosted Elytra flight and ends on landing or entering water.
 
