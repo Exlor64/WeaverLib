@@ -20,11 +20,10 @@ import dev.weaverlib.rune.Weave;
 import com.leclowndu93150.thaumaturge.api.items.RechargeAccess;
 import com.leclowndu93150.thaumaturge.api.spell.SpellSummary;
 import com.mojang.datafixers.util.Either;
-import dev.weaverlib.sol.Sol;
-import dev.weaverlib.sol.SolAction;
-import dev.weaverlib.sol.SolCombat;
-import dev.weaverlib.sol.SolFlash;
 import dev.weaverlib.spell.EternalSpells;
+import dev.weaverlib.angel.Angels;
+import dev.weaverlib.angel.AngelAction;
+import dev.weaverlib.angel.AngelBurst;
 import dev.weaverlib.spell.InscribedSpell;
 import dev.weaverlib.spell.Inscriptions;
 import dev.weaverlib.spell.WeaverParts;
@@ -70,7 +69,7 @@ public final class WeaverLib {
         WarpUnlock.register(modBus, container);
         WeaverParts.register(modBus);
         Inscriptions.register(modBus);
-        Sol.register(modBus);
+        Angels.register(modBus);
         if (hasGoety()) {
             SoulIntegrity.register(modBus);
             GoetyCasting.register(modBus);
@@ -107,8 +106,7 @@ public final class WeaverLib {
             if (words.length != 2 || !isRealIncantation(caster, words[1])) {
                 return false;
             }
-            caster.sendSystemMessage(Component.translatable(Sol.unlocked(caster)
-                ? "weaverlib.sol.weaving_blocked" : "weaverlib.incant_locked"));
+            caster.sendSystemMessage(Component.translatable("weaverlib.incant_locked"));
             return true;
         }
 
@@ -189,13 +187,11 @@ public final class WeaverLib {
     }
 
     private void registerPayloads(RegisterPayloadHandlersEvent event) {
-        var registrar = event.registrar("9");
-        registrar.playToServer(SolAction.TYPE, SolAction.CODEC, (action, context) -> {
-            if (context.player() instanceof ServerPlayer player) {
-                SolCombat.handle(player, action);
-            }
+        var registrar = event.registrar("10");
+        registrar.playToServer(AngelAction.TYPE, AngelAction.CODEC, (action, context) -> {
+            if (context.player() instanceof ServerPlayer player) Angels.handle(player, action);
         });
-        registrar.playToClient(SolFlash.TYPE, SolFlash.CODEC, (flash, context) -> flash.receive());
+        registrar.playToClient(AngelBurst.TYPE, AngelBurst.CODEC, (burst, context) -> burst.receive());
         registrar.playToServer(CastInscription.TYPE, CastInscription.CODEC, (payload, context) -> {
             if (context.player() instanceof ServerPlayer player) {
                 castInscription(player, payload.inscriptionId());
@@ -490,7 +486,7 @@ public final class WeaverLib {
             return false;
         }
 
-        double strength = spell.potency() * (spell.surge() ? 1.5 : 1) * Sol.potency(player);
+        double strength = spell.potency() * (spell.surge() ? 1.5 : 1);
         int duration = (int) (1200 * strength);
         List<LivingEntity> targets;
         if (spell.pulse()) {
@@ -512,7 +508,7 @@ public final class WeaverLib {
 
         int cost = (int) Math.ceil(spell.effect().cost() * (spell.surge() ? 1.5 : 1))
             * targets.size() + (spell.pulse() ? 2 : 0);
-        float paid = payCast(player, source, Sol.visCost(player, cost));
+        float paid = payCast(player, source, cost);
         if (paid < 0) {
             return false;
         }

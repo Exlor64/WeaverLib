@@ -8,18 +8,18 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 
-final class SolMesh {
+final class AngelMesh {
     static final int GOLD = 0xFFB73F;
     static final int WHITE = 0xFFF9E1;
 
-    private SolMesh() {}
+    private AngelMesh() {}
 
     static RenderType layer() {
         return Layer.TYPE;
     }
 
     private static final class Layer extends RenderType {
-        private static final RenderType TYPE = create("weaverlib_sol_light", DefaultVertexFormat.POSITION_COLOR,
+        private static final RenderType TYPE = create("weaverlib_angel_light", DefaultVertexFormat.POSITION_COLOR,
             VertexFormat.Mode.QUADS, 4096, false, true, CompositeState.builder()
                 .setShaderState(POSITION_COLOR_SHADER)
                 .setCullState(NO_CULL)
@@ -28,7 +28,7 @@ final class SolMesh {
                 .createCompositeState(false));
 
         private Layer() {
-            super("weaverlib_sol_light", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS,
+            super("weaverlib_angel_light", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS,
                 4096, false, true, () -> {}, () -> {});
         }
     }

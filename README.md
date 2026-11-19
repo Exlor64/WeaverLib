@@ -1,18 +1,23 @@
-# WeaverLib 0.1.36
+# WeaverLib 0.2.0
 
 An initial rune and incantation mod for Minecraft 1.21.1, NeoForge 21.1.256, and Java 21. By Ex.
 
 ## Build and install
 
 Run `gradlew.bat build` on Windows or `./gradlew build` on Linux/macOS with a Java 21 JDK. Install the JAR from `build/libs` on the server and each client alongside [Thaumaturge 1.1.0 for NeoForge 1.21.1](https://www.curseforge.com/minecraft/mc-mods/thaumaturge/files/9452543), Curios, and Lithostitched. Gradle downloads the pinned development dependencies. For development launches, use `gradlew.bat runClient` or `gradlew.bat runServer` with Java 21.
-## Sol
+## Angel form — first playable form
 
-Gravel broken by a player under direct daylight has a 1% chance to drop a Sun Stone. Hold use to eat it and unlock Sol. In direct daylight, Sol burns off one point of Warp per second, starting with temporary Warp, then normal and permanent Warp. After that, sunlight restores one Sol per second, up to 100.
+Use `/weaverangel grant <player>` as an operator to grant Angel rank. The new acquisition and rank advancement rituals are still to be designed. Existing Sol owners migrate to Angel rank, retaining their stored reserve, and start in human form. A new grant starts with 100 Grace. The old Sun Stone item ID is retained for existing worlds.
 
-Sol suppresses drawn and spoken weaving. Thaumaturge uses five times the usual Vis and half casting power. Goety spell potency is halved and rounded down. Entering the void grants access to `/sol relinquish`, which removes Sol and its reserve. The option persists after respawn.
+Press **V** to open the invocation wheel. Click **Sanctus** (Divinity) three times to transform. Repeat the sequence to revert. The other two sectors are **Pyra** (Inferno) and **Nemesis** (Retribution), reserved for the next ranks. Escape or V cancels an unfinished sequence. This is the only angel-specific keybind.
 
+Transformation costs 5 Grace when the reserve can cover it. Sunlight waives this fee below 5 Grace to let an exhausted angel recover. Zero-energy transformation works under direct sunlight and immediately starts recovering energy. A zero-energy attempt outside sunlight produces a subdued flash and leaves you human. Human form never recharges. Angel form regenerates 2 Grace/second under direct daylight, up to 100. Angel form consumes 0.25/second. Slow flight adds 0.5/second and fast flight adds 2/second. Spending the last energy ends the transformation. Death, logout, dimension changes, and game-mode changes also restore human form and remove angelic flight privileges.
 
-Unlocked players have wings whose color moves from dim gray through gold to white with their Sol reserve. Press **V** to cycle **Off → Ranged → Melee → Off**. In Ranged mode, **Z** calls a sky beam onto a target under the open sky (32 Sol), **X** brings the hands together and releases a wide beam after a short windup (24 Sol), and **B** throws a traveling light lance (12 Sol). Melee mode spreads the wings for future wing attacks. All four keys can be rebound.
+In angel form, double-tap jump for slow creative-style flight. Tap the normal sprint key while airborne to switch between slow and fast flight. Fast flight steers like continuously boosted Elytra flight and ends on landing or entering water.
+
+All mouse abilities require an empty main hand. While grounded, left-click performs a randomized wing sweep for 2 Grace, and holding right-click crosses the wings as a directional shield. Blocking starts after five ticks, costs one Grace per prevented damage point, respects shield-bypassing attacks and piercing arrows, and axes disable it for five seconds. During slow flight, left-click launches a light feather for 3 Grace. Hold right-click to repel every nearby entity type within 4.5 blocks, including projectiles and minecarts, for one Grace per entity per second. During fast flight, left-click spends 10 Grace on a spinning charge with collision damage. Hold right-click for a luminous mantle that reduces damage by 75% and spends one Grace per prevented damage point. An unaffordable action spends nothing and has no effect.
+
+Operators can use `/weaverangel refill`, `/weaverangel energy <amount>`, and `/weaverangel remove` for testing. Angelic energy is stored separately from Thaumaturge Vis and Goety Soul Energy. The previous Sol-specific Warp purification and casting penalties have been retired. Embers Re-Ignited may be installed alongside the angel system. Energy exchange mechanics await their design.
 
 ## Rune guide
 

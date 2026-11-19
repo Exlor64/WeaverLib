@@ -36,7 +36,7 @@ public final class WeaverClient {
 
     public WeaverClient(IEventBus modBus) {
         modBus.addListener(this::registerKeys);
-        new SolClient(modBus);
+        new AngelClient(modBus);
         if (WeaverLib.hasGoety()) {
             SoulVision vision = new SoulVision();
             modBus.addListener(vision::registerReload);
