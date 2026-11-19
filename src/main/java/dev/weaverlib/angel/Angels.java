@@ -47,7 +47,6 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
-import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 public final class Angels {
@@ -81,9 +80,11 @@ public final class Angels {
 
     private Angels() {}
 
-    public static void register(IEventBus bus) {
+    public static void register(IEventBus bus, net.neoforged.fml.ModContainer container) {
+        AngelFuel.register(container);
         ATTACHMENTS.register(bus);
         ITEMS.register(bus);
+        AngelProgress.register(bus);
         NeoForge.EVENT_BUS.addListener(Angels::tick);
         NeoForge.EVENT_BUS.addListener(Angels::login);
         NeoForge.EVENT_BUS.addListener(Angels::logout);
@@ -100,7 +101,7 @@ public final class Angels {
         return player.getExistingData(VIEW).orElse(View.HUMAN);
     }
 
-    private static CompoundTag data(ServerPlayer player) {
+    static CompoundTag data(ServerPlayer player) {
         var root = player.getPersistentData();
         if (!root.contains(Player.PERSISTED_NBT_TAG, 10)) {
             root.put(Player.PERSISTED_NBT_TAG, new CompoundTag());
@@ -123,20 +124,31 @@ public final class Angels {
         return Math.clamp(data(player).getInt("Rank"), 0, 3);
     }
 
-    private static double energy(ServerPlayer player) {
+    static double energy(ServerPlayer player) {
         double value = data(player).getDouble("Energy");
         return Double.isFinite(value) ? Math.clamp(value, 0, AngelEnergy.capacity(rank(player))) : 0;
     }
 
-    private static void setEnergy(ServerPlayer player, double energy) {
+    static void setEnergy(ServerPlayer player, double energy) {
         data(player).putDouble("Energy", Math.clamp(energy, 0, AngelEnergy.capacity(rank(player))));
     }
 
-    public static void grant(ServerPlayer player, int rank) {
+    public static boolean awaken(ServerPlayer player) {
+        int completed = AngelProgress.advancements(player);
+        if (completed < AngelLevels.ENTRY) {
+            player.sendSystemMessage(Component.translatable("weaverlib.angel.entry_requirement",
+                completed, AngelLevels.ENTRY));
+            return false;
+        }
+        if (rank(player) > 0) {
+            AngelProgress.refresh(player);
+            return true;
+        }
         revert(player);
-        data(player).putInt("Rank", rank);
-        setEnergy(player, AngelEnergy.capacity(rank));
+        data(player).putInt("Rank", AngelLevels.rankAt(AngelProgress.points(player)));
+        setEnergy(player, AngelEnergy.capacity(rank(player)));
         sync(player);
+        return true;
     }
 
     private static Session session(ServerPlayer player) {
@@ -200,8 +212,8 @@ public final class Angels {
 
     private static void transform(ServerPlayer player) {
         boolean sunlight = sun(player);
-        double current = energy(player);
-        if (!AngelEnergy.canPay(current, 5) && !sunlight) {
+        boolean paid = pay(player, 5);
+        if (!paid && !sunlight) {
             burst(player, AngelBurst.DIM, player.position(), player.position());
             return;
         }
@@ -214,7 +226,6 @@ public final class Angels {
         s.fast = false;
         s.level = player.serverLevel();
         // Sunlight also rescues a reserve below the activation fee, avoiding a stranded human form.
-        if (AngelEnergy.canPay(current, 5)) setEnergy(player, current - 5);
         var flight = player.getAttribute(NeoForgeMod.CREATIVE_FLIGHT);
         flight.removeModifier(FLIGHT_ATTRIBUTE);
         flight.addTransientModifier(new AttributeModifier(FLIGHT_ATTRIBUTE, 1, AttributeModifier.Operation.ADD_VALUE));
@@ -265,10 +276,7 @@ public final class Angels {
     }
 
     private static boolean pay(ServerPlayer player, double cost) {
-        double energy = energy(player);
-        if (!AngelEnergy.canPay(energy, cost)) return false;
-        setEnergy(player, AngelEnergy.afterPayment(energy, cost));
-        return true;
+        return AngelFuel.pay(player, cost, true);
     }
 
     private static void attack(ServerPlayer player, long now) {
@@ -347,7 +355,7 @@ public final class Angels {
                 player.serverLevel().sendParticles(ParticleTypes.FLAME, at.x, at.y, at.z, 2, .2, .2, .2, .005);
             }
         }
-        if (energy(player) <= 0) revert(player);
+        if (energy(player) <= 0 && !AngelFuel.pay(player, AngelEnergy.upkeep(false, false), false)) revert(player);
         else sync(player);
     }
 
@@ -469,7 +477,7 @@ public final class Angels {
         return s != null && s.active && s.defendUntil >= player.serverLevel().getGameTime() && canUseWings(player);
     }
 
-    private static void sync(ServerPlayer player) {
+    static void sync(ServerPlayer player) {
         var s = player.getExistingData(SESSION).orElse(null);
         boolean active = s != null && s.active;
         long now = player.serverLevel().getGameTime();
@@ -485,7 +493,10 @@ public final class Angels {
     }
 
     private static void login(PlayerEvent.PlayerLoggedInEvent e) {
-        if (e.getEntity() instanceof ServerPlayer p) revert(p);
+        if (e.getEntity() instanceof ServerPlayer p) {
+            revert(p);
+            AngelProgress.refresh(p);
+        }
     }
 
     private static void logout(PlayerEvent.PlayerLoggedOutEvent e) {
@@ -499,6 +510,7 @@ public final class Angels {
         if (e.getEntity() instanceof ServerPlayer p) {
             p.removeData(SESSION);
             revert(p);
+            AngelProgress.refresh(p);
         }
     }
 
@@ -515,26 +527,35 @@ public final class Angels {
     }
 
     private static void commands(RegisterCommandsEvent e) {
-        e.getDispatcher().register(Commands.literal("weaverangel").requires(source -> source.hasPermission(2))
-            .then(Commands.literal("grant").then(Commands.argument("player", EntityArgument.player())
-                .executes(ctx -> { grant(EntityArgument.getPlayer(ctx, "player"), 1); return 1; })))
-            .then(Commands.literal("refill").executes(ctx -> {
+        e.getDispatcher().register(Commands.literal("weaverangel")
+            .then(Commands.literal("status").executes(ctx -> {
+                AngelProgress.status(ctx.getSource().getPlayerOrException());
+                return 1;
+            }))
+            .then(Commands.literal("prime").requires(source -> source.hasPermission(2))
+                .then(Commands.argument("player", EntityArgument.player())
+                    .executes(ctx -> AngelProgress.appointPrime(EntityArgument.getPlayer(ctx, "player")) ? 1 : 0)))
+            .then(Commands.literal("grant").requires(source -> source.hasPermission(2))
+                .then(Commands.argument("player", EntityArgument.player())
+                    .executes(ctx -> awaken(EntityArgument.getPlayer(ctx, "player")) ? 1 : 0)))
+            .then(Commands.literal("refill").requires(source -> source.hasPermission(2)).executes(ctx -> {
                 var p = ctx.getSource().getPlayerOrException();
                 setEnergy(p, AngelEnergy.capacity(rank(p)));
                 sync(p);
                 return 1;
             }))
-            .then(Commands.literal("energy").then(Commands.argument("amount", DoubleArgumentType.doubleArg(0, 350))
+            .then(Commands.literal("energy").requires(source -> source.hasPermission(2)).then(Commands.argument("amount", DoubleArgumentType.doubleArg(0, 350))
                 .executes(ctx -> {
                     var p = ctx.getSource().getPlayerOrException();
                     setEnergy(p, DoubleArgumentType.getDouble(ctx, "amount"));
                     sync(p);
                     return 1;
                 })))
-            .then(Commands.literal("remove").executes(ctx -> {
+            .then(Commands.literal("remove").requires(source -> source.hasPermission(2)).executes(ctx -> {
                 var p = ctx.getSource().getPlayerOrException();
                 revert(p);
                 data(p).putInt("Rank", 0);
+                data(p).remove("Prime");
                 setEnergy(p, 0);
                 sync(p);
                 return 1;

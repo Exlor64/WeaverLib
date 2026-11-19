@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'dev.weaverlib'
-version = '0.2.0'
+version = '0.2.1'
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
 repositories {
@@ -18,6 +18,7 @@ repositories {
 }
 
 dependencies {
+    compileOnly 'maven.modrinth:embers-re-ignited:1.21.1-1.5.9'
     implementation 'curse.maven:thaumaturge-1628024:9452543'
     compileOnly "curse.maven:goety-586095:9207885"
     runtimeOnly 'maven.modrinth:lithostitched:1.8.0-neoforge-21.1'
@@ -37,4 +38,14 @@ neoForge {
 
 tasks.named('jar') {
     from('LICENSE')
+}
+
+// Standalone rule tests exercise progression and transactional energy payments without a game bootstrap.
+tasks.register('angelRulesTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'AngelRulesTest'
+}
+tasks.named('check') {
+    dependsOn tasks.named('angelRulesTest')
 }

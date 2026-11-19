@@ -69,7 +69,7 @@ public final class WeaverLib {
         WarpUnlock.register(modBus, container);
         WeaverParts.register(modBus);
         Inscriptions.register(modBus);
-        Angels.register(modBus);
+        Angels.register(modBus, container);
         if (hasGoety()) {
             SoulIntegrity.register(modBus);
             GoetyCasting.register(modBus);
