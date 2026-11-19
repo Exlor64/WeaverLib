@@ -2,6 +2,8 @@ package dev.weaverlib.client;
 
 /** Model-space wing skeleton, in blocks. +Y is down and -Z is in front of the chest. */
 public final class AngelWingMotion {
+    private static final double WING_SCALE = 1.30;
+
     public record Point(double x, double y, double z) {
         Point add(Point p) { return new Point(x + p.x, y + p.y, z + p.z); }
         Point scale(double s) { return new Point(x * s, y * s, z * s); }
@@ -52,7 +54,11 @@ public final class AngelWingMotion {
                 dz = dz * cosine + (tx * dy - ty * dx) * sine + tz * along;
                 dx = rolledX; dy = rolledY;
             }
-            return clearArms(clearBody(new Point(x + dx, y + dy, z + dz)), span);
+            // Enlarge around the attachment, then apply body/arm clearance at the final size.
+            // This keeps the roots close to the back in both first- and third-person views.
+            Point enlarged = new Point(root.x + (x + dx - root.x) * WING_SCALE,
+                root.y + (y + dy - root.y) * WING_SCALE, root.z + (z + dz - root.z) * WING_SCALE);
+            return clearArms(clearBody(enlarged), span);
         }
     }
 

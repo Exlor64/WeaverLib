@@ -53,6 +53,7 @@ public final class Angels {
     private static final ResourceLocation FLIGHT_ATTRIBUTE =
         ResourceLocation.fromNamespaceAndPath(WeaverLib.ID, "angel_flight");
     public static final double SLOW_SPEED = .03;
+    private static final double MELEE_RANGE = 3.2 * 1.25;
     // Retain the old item ID so worlds containing a Sun Stone still load cleanly.
     private static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(WeaverLib.ID);
     static {
@@ -366,9 +367,9 @@ public final class Angels {
         Vec3 origin = player.getEyePosition();
         Vec3 forward = player.getLookAngle().multiply(1, 0, 1).normalize();
         for (LivingEntity target : player.serverLevel().getEntitiesOfClass(LivingEntity.class,
-                player.getBoundingBox().inflate(3.0, .5, 3.0), e -> canHit(player, e))) {
+                player.getBoundingBox().inflate(MELEE_RANGE, .5, MELEE_RANGE), e -> canHit(player, e))) {
             Vec3 delta = target.getBoundingBox().getCenter().subtract(origin);
-            if (delta.lengthSqr() <= 3.2 * 3.2 && forward.dot(delta.normalize()) >= .2
+            if (delta.lengthSqr() <= MELEE_RANGE * MELEE_RANGE && forward.dot(delta.normalize()) >= .2
                     && player.hasLineOfSight(target)) {
                 target.hurt(player.damageSources().playerAttack(player), 5);
                 target.knockback(.5, -delta.x, -delta.z);
