@@ -43,6 +43,9 @@ tasks.named('jar') {
 // Standalone rule tests exercise progression and transactional energy payments without a game bootstrap.
 tasks.register('angelRulesTest', JavaExec) {
     dependsOn tasks.named('testClasses')
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = java.toolchain.languageVersion
+    }
     classpath = sourceSets.test.runtimeClasspath
     mainClass = 'AngelRulesTest'
 }
