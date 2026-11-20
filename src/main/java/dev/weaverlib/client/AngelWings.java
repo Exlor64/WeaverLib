@@ -21,7 +21,7 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
     private ClientLevel world;
 
     private static final class Motion {
-        double lastTime, phase, flight, fast, effort = .7, guard, previousSpeed, vertical;
+        double lastTime, phase, flight, fast, effort = .7, guard, previousSpeed, vertical, dive, dash;
         long lastBirthParticle = Long.MIN_VALUE;
         Motion(double time) { lastTime = time; }
     }
@@ -56,6 +56,9 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
         m.vertical += (player.getDeltaMovement().y - m.vertical) * blend;
         m.flight += ((flying ? 1 : 0) - m.flight) * blend;
         m.fast += ((view.fast() ? 1 : 0) - m.fast) * blend;
+        double diving = view.fast() ? AngelWingMotion.diveAmount(player.getViewXRot(partial), player.getDeltaMovement().y) : 0;
+        m.dive += (diving - m.dive) * blend;
+        m.dash += ((view.fast() && view.spin() > time ? 1 : 0) - m.dash) * (1 - Math.exp(-elapsed / 2.5));
         m.guard += ((view.defending() && !flying ? 1 : 0) - m.guard) * (1 - Math.exp(-elapsed / 2.2));
         // Integrating phase prevents animation jumps when speed or flight mode changes.
         double hoverRate = AngelWingMotion.hoverRate(m.vertical);
@@ -72,6 +75,7 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
             for (int side = -1; side <= 1; side += 2) {
                 double strike = view.wing() == pair * 2 + (side > 0 ? 1 : 0) ? attack : -1;
                 var normal = AngelWingMotion.sample(m.phase, m.flight, m.fast, m.effort, m.guard, strike, pair, side);
+                normal = AngelWingMotion.aerial(normal, m.dive, m.dash, pair, side);
                 double growth = formation.started() < 0 ? 1
                     : AngelWingMotion.birthProgress(time - formation.started(), pair);
                 var joints = AngelWingMotion.growing(normal, growth);

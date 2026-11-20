@@ -136,6 +136,48 @@ public final class AngelVisualRulesTest {
                 }
             }
         }
+        require(AngelWingMotion.diveAmount(0, -1) == 0, "Level flight should keep the wings open");
+        require(AngelWingMotion.diveAmount(75, .3) == 0, "Climbing should not use the dive tuck");
+        require(AngelWingMotion.diveAmount(75, -1) == 1, "A steep descent should fully tuck the wings");
+        for (int pair = 0; pair < 3; pair++) {
+            for (int side : new int[]{-1, 1}) {
+                var full = AngelWingMotion.sample(0, 1, 1, .4, 0, -1, pair, side);
+                var tucked = AngelWingMotion.aerial(full, 1, 0, pair, side);
+                var wrapped = AngelWingMotion.aerial(full, 0, 1, pair, side);
+                require(tucked.tip().x() < .5 && tucked.tip().y() > .95,
+                    "Dive tips should trail along the body, not stick out sideways");
+                require(wrapped.tip().x() < 0 && wrapped.tip().z() < -.4,
+                    "Dash wings must wrap across the front of the body");
+                require(AngelWingMotion.aerial(full, 1, 1, pair, side).tip().equals(wrapped.tip()),
+                    "Dash wrap must take priority over the dive tuck");
+                for (int dive = 0; dive <= 4; dive++) {
+                    for (int dash = 0; dash <= 4; dash++) {
+                        var pose = AngelWingMotion.aerial(full, dive / 4.0, dash / 4.0, pair, side);
+                        require(pose.root().equals(full.root()), "Aerial folding must keep roots attached");
+                        for (int u = 0; u <= 24; u++) {
+                            for (int v = 0; v <= 12; v++) {
+                                var p = pose.surface(u / 22.0, v / 12.0);
+                                require(Double.isFinite(p.x()) && Double.isFinite(p.y()) && Double.isFinite(p.z()),
+                                    "Aerial wing geometry must stay finite");
+                                boolean torso = p.y() > -.25 && p.y() < 1.40
+                                    && Math.abs(p.x()) < .26 && Math.abs(p.z()) < .13;
+                                double shaftZ = p.z() - .025;
+                                boolean arm = p.y() > -.06 && p.y() < .95 && Math.abs(p.x()) > .23
+                                    && Math.abs(p.x()) < .58 && shaftZ > -.22 && shaftZ < .22;
+                                require(!torso && !arm, "Aerial wing folds must clear the player");
+                            }
+                        }
+                        frames++;
+                    }
+                }
+            }
+        }
+        require(near(AngelFlightMath.channelRoll(1), AngelFlightMath.channelRoll(7)),
+            "Channeled rotation must remain periodic without depending on lease expiry");
+        require(Math.abs(AngelFlightMath.settleRoll(-6, 1)) < .3,
+            "Dash release must unwind by the short path instead of snapping through a full turn");
+        require(Math.abs(AngelFlightMath.settleRoll(1.5, 4)) < .25,
+            "Dash roll should settle smoothly after release");
         require(AngelFlightMath.roll(-1) == 0, "An expired attack must not keep rolling");
         System.out.println("Passed angel visual geometry checks across " + frames + " animation and flight frames.");
     }

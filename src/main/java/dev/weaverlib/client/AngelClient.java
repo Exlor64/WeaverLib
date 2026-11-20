@@ -27,6 +27,7 @@ final class AngelClient {
     private final AngelVisuals visuals = new AngelVisuals();
     private boolean wasSprint;
     private boolean defending;
+    private boolean dashing;
     private float guardPose;
 
     AngelClient(IEventBus bus) {
@@ -58,7 +59,7 @@ final class AngelClient {
         if (e.isAttack() || e.isUseItem()) {
             e.setCanceled(true);
             e.setSwingHand(false);
-            if (e.isAttack()) send(AngelAction.ATTACK);
+            if (e.isAttack() && !Angels.view(player).fast()) send(AngelAction.ATTACK);
         }
     }
 
@@ -79,6 +80,11 @@ final class AngelClient {
             }
         }
         if (!ready) {
+            if (client.getConnection() != null) {
+                if (dashing) send(AngelAction.STOP_DASH);
+                if (defending) send(AngelAction.RELEASE);
+            }
+            dashing = false;
             defending = false;
             wasSprint = false;
             guardPose = 0;
@@ -90,6 +96,11 @@ final class AngelClient {
         if (guard && (!defending || player.tickCount % 4 == 0)) send(AngelAction.DEFEND);
         if (!guard && defending) send(AngelAction.RELEASE);
         defending = guard;
+        boolean dash = active && Angels.view(player).fast() && client.screen == null
+            && player.getMainHandItem().isEmpty() && !player.isUsingItem() && client.options.keyAttack.isDown();
+        if (dash && (!dashing || player.tickCount % 4 == 0)) send(AngelAction.DASH);
+        if (!dash && dashing) send(AngelAction.STOP_DASH);
+        dashing = dash;
         float desiredGuard = Angels.view(player).defending() && !Angels.flying(player) ? 1 : 0;
         guardPose += Math.clamp(desiredGuard - guardPose, -.25F, .25F);
         boolean sprint = client.options.keySprint.isDown();

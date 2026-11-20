@@ -1,4 +1,5 @@
 import dev.weaverlib.angel.AngelEnergy;
+import dev.weaverlib.angel.AngelDash;
 import dev.weaverlib.angel.AngelLevels;
 import dev.weaverlib.angel.AngelPayment;
 import java.util.List;
@@ -67,6 +68,17 @@ public final class AngelRulesTest {
         check(AngelPayment.spend(0, Double.NaN, 100, List.of(a), true) < 0);
         check(AngelPayment.spend(0, 1, 0, List.of(a), true) < 0);
         check(AngelPayment.spend(0, 1, 100, List.of(), true) < 0);
+        check(!AngelDash.NONE.active(0));
+        var dash = AngelDash.begin(0);
+        check(dash.active(0) && dash.active(9) && !dash.active(10));
+        for (int tick = 4; tick <= 80; tick += 4) {
+            dash = dash.renew(tick);
+            check(dash.started() == 0 && dash.active(tick));
+        }
+        check(!dash.active(90));
+        check(!dash.renew(90).active(90));
+        check(equal(AngelDash.COST_PER_TICK * 20, 10));
+        check(equal(AngelDash.START_COST, 10));
         System.out.println("Passed " + checks + " angel progression and payment checks.");
         AngelVisualRulesTest.run();
     }

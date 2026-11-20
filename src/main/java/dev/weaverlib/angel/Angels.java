@@ -87,6 +87,9 @@ public final class Angels {
         ATTACHMENTS.register("angel_view", () -> AttachmentType.builder(() -> View.HUMAN).sync(CODEC).build());
     private static final DeferredHolder<AttachmentType<?>, AttachmentType<Session>> SESSION =
         ATTACHMENTS.register("angel_session", () -> AttachmentType.builder(Session::new).build());
+    private static final DeferredHolder<AttachmentType<?>, AttachmentType<Long>> DASH_STARTED =
+        ATTACHMENTS.register("angel_dash_started", () -> AttachmentType.builder(() -> -1L)
+            .sync(ByteBufCodecs.VAR_LONG).build());
 
     private Angels() {}
 
@@ -113,6 +116,10 @@ public final class Angels {
 
     public static Formation formation(Player player) {
         return player.getExistingData(FORMATION).orElse(Formation.NONE);
+    }
+
+    public static long dashStarted(Player player) {
+        return player.getExistingData(DASH_STARTED).orElse(-1L);
     }
 
     static CompoundTag data(ServerPlayer player) {
@@ -191,6 +198,8 @@ public final class Angels {
                 else transform(player);
             }
             case AngelAction.ATTACK -> attack(player, now);
+            case AngelAction.DASH -> startDash(player, now);
+            case AngelAction.STOP_DASH -> stopDash(player, now);
             case AngelAction.DEFEND -> {
                 if (canUseWings(player)) {
                     if (session.defendUntil < now) session.defendStarted = now;
@@ -203,6 +212,7 @@ public final class Angels {
                         && !player.isInWater() && !player.isPassenger()) {
                     session.nextFlight = now + 8;
                     session.fast = !session.fast;
+                    if (!session.fast) stopDash(player, now);
                     player.getAbilities().flying = !session.fast;
                     if (session.fast) {
                         player.startFallFlying();
@@ -254,13 +264,16 @@ public final class Angels {
 
     private static void revert(ServerPlayer player) {
         player.setData(FORMATION, Formation.NONE);
+        player.setData(DASH_STARTED, -1L);
         var s = player.getExistingData(SESSION).orElse(null);
         boolean wasActive = s != null && s.active;
         if (s != null) {
             s.active = false;
             s.fast = false;
             s.defendUntil = 0;
-            s.spinUntil = 0;
+            s.dash = AngelDash.NONE;
+            s.spinHits.clear();
+            s.spinPosition = null;
             s.meleeAt = 0;
             s.feathers.clear();
         }
@@ -299,13 +312,7 @@ public final class Angels {
         var s = session(player);
         if (!canUseWings(player) || now < s.nextAttack || s.defendUntil >= now) return;
         if (s.fast) {
-            if (!pay(player, 10)) return;
-            s.nextAttack = now + 24;
-            s.spinUntil = now + 18;
-            s.spinHits.clear();
-            s.spinPosition = player.getBoundingBox().getCenter();
-            player.setDeltaMovement(player.getLookAngle().scale(1.8));
-            player.connection.send(new ClientboundSetEntityMotionPacket(player));
+            startDash(player, now);
         } else if (player.getAbilities().flying) {
             if (!pay(player, 3)) return;
             s.nextAttack = now + 10;
@@ -324,6 +331,34 @@ public final class Angels {
         }
     }
 
+    private static void startDash(ServerPlayer player, long now) {
+        var s = session(player);
+        if (!s.fast || !canUseWings(player)) return;
+        if (s.dash.active(now)) {
+            s.dash = s.dash.renew(now);
+            return;
+        }
+        if (s.dash.started() >= 0) stopDash(player, now);
+        if (now < s.nextAttack || s.defendUntil >= now || !pay(player, AngelDash.START_COST)) return;
+        s.nextAttack = now + 24;
+        s.dash = AngelDash.begin(now);
+        s.spinHits.clear();
+        s.spinPosition = player.getBoundingBox().getCenter();
+        player.setData(DASH_STARTED, now);
+        player.setDeltaMovement(player.getLookAngle().scale(1.8));
+        player.connection.send(new ClientboundSetEntityMotionPacket(player));
+    }
+
+    private static void stopDash(ServerPlayer player, long now) {
+        var s = session(player);
+        if (s.dash.started() < 0) return;
+        s.dash = AngelDash.NONE;
+        s.spinHits.clear();
+        s.spinPosition = null;
+        s.nextAttack = Math.max(s.nextAttack, now + 6);
+        player.setData(DASH_STARTED, -1L);
+    }
+
     private static void tick(PlayerTickEvent.Post event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         var s = player.getExistingData(SESSION).orElse(null);
@@ -338,7 +373,7 @@ public final class Angels {
         long now = player.serverLevel().getGameTime();
         if (s.fast && (player.onGround() || player.isInWater() || player.isPassenger())) {
             s.fast = false;
-            s.spinUntil = 0;
+            stopDash(player, now);
             player.stopFallFlying();
             player.getAbilities().flying = false;
             player.onUpdateAbilities();
@@ -350,6 +385,10 @@ public final class Angels {
             return;
         }
         if (!canUseWings(player)) s.defendUntil = 0;
+        if (s.dash.started() >= 0) {
+            if (!s.fast || !canUseWings(player) || !s.dash.active(now)
+                    || !pay(player, AngelDash.COST_PER_TICK)) stopDash(player, now);
+        }
         if (s.defendUntil >= now && player.getAbilities().flying && !s.fast) repel(player);
         if (s.meleeAt != 0 && now >= s.meleeAt) {
             s.meleeAt = 0;
@@ -363,9 +402,9 @@ public final class Angels {
             if (advanceFeather(player, feather) && s.active) s.feathers.add(feather);
         }
         if (!s.active) return;
-        if (s.fast && s.spinUntil > now) spinCollision(player, s);
+        if (s.fast && s.dash.active(now)) spinCollision(player, s);
         if (s.fast) {
-            accelerate(player, s.spinUntil > now);
+            accelerate(player, s.dash.active(now));
         }
         if (energy(player) <= 0 && !AngelFuel.pay(player, AngelEnergy.upkeep(false, false), false)) revert(player);
         else sync(player);
@@ -440,6 +479,7 @@ public final class Angels {
         for (LivingEntity target : player.serverLevel().getEntitiesOfClass(LivingEntity.class,
                 new AABB(previous, current).inflate(.8),
                 e -> canHit(player, e) && !s.spinHits.contains(e.getUUID()))) {
+            if (!s.active || !s.dash.active(player.serverLevel().getGameTime())) break;
             var hitbox = target.getBoundingBox().inflate(.65);
             if ((!hitbox.contains(previous) && !hitbox.contains(current) && hitbox.clip(previous, current).isEmpty())
                     || !player.hasLineOfSight(target)) continue;
@@ -495,7 +535,7 @@ public final class Angels {
         long now = player.serverLevel().getGameTime();
         View next = new View(rank(player), (int) Math.round(energy(player) * 100), active,
             active && s.fast, active && s.defendUntil >= now && now >= s.shieldDisabledUntil,
-            s == null ? 0 : s.wing, s == null ? 0 : s.swing, active ? s.spinUntil : 0);
+            s == null ? 0 : s.wing, s == null ? 0 : s.swing, active ? s.dash.until() : 0);
         if (!next.equals(view(player))) player.setData(VIEW, next);
     }
 
@@ -640,7 +680,7 @@ public final class Angels {
         long swing;
         long meleeAt;
         int wing;
-        long spinUntil;
+        AngelDash dash = AngelDash.NONE;
         Vec3 spinPosition;
         final Set<UUID> spinHits = new HashSet<>();
         final List<Feather> feathers = new ArrayList<>();

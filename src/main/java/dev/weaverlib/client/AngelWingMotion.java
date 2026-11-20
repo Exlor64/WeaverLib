@@ -11,7 +11,7 @@ public final class AngelWingMotion {
     }
 
     public record Joints(Point root, Point elbow, Point wrist, Point tip, double recovery, double guard,
-                         double strikeRoll, double growth) {
+                         double strikeRoll, double growth, double streamline) {
         /** Curved, feathered surface following the articulated bones, rather than a rigid panel. */
         public Point surface(double span, double trail) {
             double s = Math.clamp(span, 0, 1) * 3;
@@ -34,8 +34,10 @@ public final class AngelWingMotion {
             }
             double length = .62 + .24 * Math.sin(Math.min(1, span) * Math.PI);
             // Closed feathers scoop around the chest; open feathers flex on the recovery stroke.
-            double dx = .06 * trail * (1 - guard), dy = trail * length;
-            double dz = (.10 - guard * .20) * trail + .10 * recovery * Math.sin(trail * Math.PI);
+            double dx = (.06 * (1 - guard) * (1 - streamline) - .14 * streamline) * trail;
+            double dy = trail * length * (1 - streamline * .25);
+            double dz = ((.10 - guard * .20) * (1 - streamline) - .18 * streamline) * trail
+                + .10 * recovery * Math.sin(trail * Math.PI) * (1 - streamline);
             if (strikeRoll > 0) {
                 // Roll the feather fan around its curved leading edge. The shoulder stays anchored;
                 // the outer wing turns edge-first, with the feathers trailing behind the strike.
@@ -84,7 +86,27 @@ public final class AngelWingMotion {
         Point elbow = target.root.add(rotate(upper, -65 * folded, 20 * folded, 0).scale(smooth(p / .58)));
         Point wrist = elbow.add(rotate(fore, -72 * folded, 24 * folded, 0).scale(smooth((p - .10) / .70)));
         Point tip = wrist.add(rotate(outer, -80 * folded, 28 * folded, 0).scale(smooth((p - .25) / .75)));
-        return new Joints(target.root, elbow, wrist, tip, target.recovery, target.guard, target.strikeRoll, p);
+        return new Joints(target.root, elbow, wrist, tip, target.recovery, target.guard, target.strikeRoll, p,
+            target.streamline);
+    }
+
+    public static double diveAmount(double pitch, double verticalSpeed) {
+        return smooth((pitch - 10) / 55) * smooth((-verticalSpeed - .02) / .40);
+    }
+
+    /** Fold along the spine for a dive, or curl around the body for a held spinning charge. */
+    public static Joints aerial(Joints target, double dive, double dash, int pair, int side) {
+        dive = smooth(dive);
+        dash = smooth(dash);
+        Point root = target.root;
+        Point elbow = target.elbow.blend(new Point(.53, root.y + .14, .29 + pair * .02), dive);
+        Point wrist = target.wrist.blend(new Point(.46, .72 + pair * .06, .34 + pair * .02), dive);
+        Point tip = target.tip.blend(new Point(.33, 1.02 + pair * .04, .38 + pair * .025), dive);
+        elbow = elbow.blend(new Point(.57, root.y + .05, .16), dash);
+        wrist = wrist.blend(new Point(.47, .18 + pair * .12, -.38 - side * .02), dash);
+        tip = tip.blend(new Point(-.25, .26 + pair * .12 + side * .05, -.50 - side * .035), dash);
+        return new Joints(root, elbow, wrist, tip, target.recovery * (1 - Math.max(dive, dash)),
+            target.guard, target.strikeRoll, target.growth, Math.max(dive, dash));
     }
 
     /** Hover cadence is 44% below the original rate (30% reduction, then another 20%); normal ascent/descent varies it by up to 40%. */
@@ -157,7 +179,7 @@ public final class AngelWingMotion {
         wrist = wrist.blend(new Point(.72, root.y - .15 - side * .11, -.78), guard);
         tip = tip.blend(new Point(-.34, root.y + .02 - side * .28, -.92 - pair * .035 - side * .04), guard);
         return new Joints(root, clearBody(elbow), clearBody(wrist), clearBody(tip), recovery * amplitude, guard,
-            strikeRoll, 1);
+            strikeRoll, 1, 0);
     }
 
     private static Point rotate(Point p, double flap, double sweep, double twist) {

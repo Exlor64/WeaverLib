@@ -8,6 +8,10 @@ public record AngelFlightFrame(Vec3 forward, Vec3 right, Vec3 up) {
         return AngelFlightMath.roll(remainingSpinTicks);
     }
 
+    public static double channelRoll(double elapsedTicks) {
+        return AngelFlightMath.channelRoll(elapsedTicks);
+    }
+
     public static AngelFlightFrame of(double yaw, double pitch, double roll) {
         var basis = AngelFlightMath.of(yaw, pitch, roll);
         return new AngelFlightFrame(vector(basis.forward()), vector(basis.right()), vector(basis.up()));

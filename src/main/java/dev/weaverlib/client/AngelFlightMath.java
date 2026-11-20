@@ -18,6 +18,14 @@ public record AngelFlightMath(Vector forward, Vector right, Vector up) {
         return Math.max(0, remainingSpinTicks) * Math.PI / 3;
     }
 
+    public static double channelRoll(double elapsedTicks) {
+        return -(Math.max(0, elapsedTicks) % 6) * Math.PI / 3;
+    }
+
+    public static double settleRoll(double angle, double elapsedTicks) {
+        return Math.atan2(Math.sin(angle), Math.cos(angle)) * Math.exp(-Math.max(0, elapsedTicks) / 2);
+    }
+
     public static AngelFlightMath of(double yaw, double pitch, double roll) {
         double y = Math.toRadians(yaw), p = Math.toRadians(pitch);
         Vector forward = new Vector(-Math.sin(y) * Math.cos(p), -Math.sin(p), Math.cos(y) * Math.cos(p));
