@@ -21,11 +21,17 @@ final class PyraWingFire {
     private static final Map<BlockPos,List<AABB>> COLLIDERS=new HashMap<>();
     private static ClientLevel world;
     private static long collisionTick=Long.MIN_VALUE;
+    private static boolean worldPass;
     private PyraWingFire() {}
+
+    static void stage(net.neoforged.neoforge.client.event.RenderLevelStageEvent event) {
+        worldPass=event.getStage()!=net.neoforged.neoforge.client.event.RenderLevelStageEvent.Stage.AFTER_LEVEL;
+    }
+    static boolean inWorldPass() { return worldPass; }
 
     static void tick(ClientLevel level) {
         if(world!=level) { PLUMES.clear();COLLIDERS.clear();world=level; }
-        if(level==null)return;
+        if(level==null) { worldPass=false;return; }
         long now=level.getGameTime();
         if(collisionTick!=now) { COLLIDERS.clear();collisionTick=now; }
         PLUMES.entrySet().removeIf(entry -> {
@@ -37,6 +43,8 @@ final class PyraWingFire {
 
     static void capture(AbstractClientPlayer player,PoseStack pose,AngelWingMotion.Joints joints,
             long pattern,int pair,int side,boolean hand) {
+        // Inventory/entity previews use GUI coordinates, not live world wing positions.
+        if(!hand && !worldPass)return;
         var client=Minecraft.getInstance();
         if(world!=client.level)tick(client.level);
         if(world==null || player.distanceToSqr(client.gameRenderer.getMainCamera().getPosition())>64*64)return;

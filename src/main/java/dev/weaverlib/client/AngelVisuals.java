@@ -41,6 +41,7 @@ final class AngelVisuals {
     }
 
     void render(RenderLevelStageEvent e) {
+        PyraWingFire.stage(e);
         if (e.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
         var client = Minecraft.getInstance();
         if (client.level == null) {

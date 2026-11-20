@@ -95,9 +95,11 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
                     if (pass == 0) geometry(buffer, pose, joints, fire, pattern);
                     else {
                         PyraWings.geometry(buffer, pose, joints, time + pair * 11, pattern);
-                        PyraWingFire.capture(player, pose, joints, pattern, pair, side, false);
-                        PyraTrails.sample(player, pose, joints, time, pair, side);
-                        if (!flying && strike >= 0) PyraSlashes.sample(player, pose, joints, time, strike);
+                        if (PyraWingFire.inWorldPass()) {
+                            PyraWingFire.capture(player, pose, joints, pattern, pair, side, false);
+                            PyraTrails.sample(player, pose, joints, time, pair, side);
+                            if (!flying && strike >= 0) PyraSlashes.sample(player, pose, joints, time, strike);
+                        }
                     }
                     if (!fire && growth < 1) {
                         birthGlow(buffer, pose, joints, growth, formation.dim());
