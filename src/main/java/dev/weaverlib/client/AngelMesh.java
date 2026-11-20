@@ -18,6 +18,26 @@ final class AngelMesh {
         return Layer.TYPE;
     }
 
+    /** Physical feathers participate in scene depth; glow and fire retain their color-only passes. */
+    static RenderType wingLayer() { return Wings.TYPE; }
+
+    private static final class Wings extends RenderType {
+        private static final RenderType TYPE = create("weaverlib_angel_feathers", DefaultVertexFormat.POSITION_COLOR,
+            VertexFormat.Mode.QUADS, 16384, false, true, CompositeState.builder()
+                .setShaderState(POSITION_COLOR_SHADER)
+                .setCullState(NO_CULL)
+                .setDepthTestState(LEQUAL_DEPTH_TEST)
+                .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                .setWriteMaskState(COLOR_DEPTH_WRITE)
+                .setOutputState(MAIN_TARGET)
+                .createCompositeState(false));
+
+        private Wings() {
+            super("weaverlib_angel_feathers", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS,
+                16384, false, true, () -> {}, () -> {});
+        }
+    }
+
     private static final class Layer extends RenderType {
         private static final RenderType TYPE = create("weaverlib_angel_light", DefaultVertexFormat.POSITION_COLOR,
             VertexFormat.Mode.QUADS, 4096, false, true, CompositeState.builder()

@@ -143,13 +143,14 @@ final class AngelClient {
         if (event.getHand() != InteractionHand.MAIN_HAND) return;
         var poses = event.getPoseStack();
         boolean fire = Angels.inferno(player);
-        for (int pass = 0; pass < (fire ? 2 : 1); pass++) {
-            var buffer = event.getMultiBufferSource().getBuffer(pass == 0 ? AngelMesh.layer() : PyraFire.layer());
+        for (int pass = 0; pass < (fire ? 3 : 2); pass++) {
+            var buffer = event.getMultiBufferSource().getBuffer(pass == 0 ? AngelMesh.wingLayer()
+                : pass == 1 ? AngelMesh.layer() : PyraFire.layer());
             for (int side = -1; side <= 1; side += 2) {
                 poses.pushPose();
                 boolean strikingWing = (Angels.view(player).wing() % 2 == 0 ? -1 : 1) == side;
                 double strike = strikingWing && sweep > 0 ? attack : -1;
-                // Match the two third-person material passes on the same articulated wing.
+                // Match the depth-writing vane, glow and fire passes used in third person.
                 poses.translate(0, -.04, -.08);
                 poses.scale(side * .85F, -.85F, .85F);
                 var formation = Angels.formation(player);
@@ -162,6 +163,7 @@ final class AngelClient {
                 if (aerialPyra && strike >= 0) joints = PyraWingMotion.slash(joints, strike);
                 joints = AngelWingMotion.growing(joints, growth);
                 if (pass == 0) AngelWings.geometry(buffer, poses, joints, fire);
+                else if (pass == 1) AngelWings.glowGeometry(buffer, poses, joints, fire);
                 else {
                     PyraWings.geometry(buffer, poses, joints, time, pattern);
                     PyraWingFire.capture(player, poses, joints, pattern, pair, side, true);

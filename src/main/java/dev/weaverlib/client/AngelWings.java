@@ -74,11 +74,12 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
         if (fire && flying && !view.fast() && aerialCharge.active() && aerialCharge.fireball()) {
             m.gather = Math.clamp(time - aerialCharge.started(), 0, 18);
         } else m.gather = Math.max(0, m.gather - elapsed * 3);
-        // Complete the feather pass before the fire pass. Both use the same pose and skeleton;
-        // reacquiring a shared buffer mid-wing would flush it and break translucent ordering.
-        for (int pass = 0; pass < (fire ? 2 : 1); pass++) {
-            var buffer = buffers.getBuffer(pass == 0 ? AngelMesh.layer() : PyraFire.layer());
-            if (pass == 1) {
+        // Draw all depth-writing feathers before their color-only fringe and fire overlays.
+        // Each pass uses the same skeleton, without reacquiring or flushing a buffer mid-wing.
+        for (int pass = 0; pass < (fire ? 3 : 2); pass++) {
+            var buffer = buffers.getBuffer(pass == 0 ? AngelMesh.wingLayer()
+                : pass == 1 ? AngelMesh.layer() : PyraFire.layer());
+            if (pass == 2) {
                 double strength = formation.started() < 0 ? 1
                     : AngelWingMotion.smooth((time - formation.started()) / 18);
                 PyraAura.render(buffer, pose, getParentModel(), player, strength * (formation.dim() ? .65 : 1));
@@ -104,6 +105,7 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
                     long pattern = AngelFeathers.seed(player.getUUID().getMostSignificantBits(),
                         player.getUUID().getLeastSignificantBits(), pair, side);
                     if (pass == 0) geometry(buffer, pose, joints, fire);
+                    else if (pass == 1) glowGeometry(buffer, pose, joints, fire);
                     else {
                         PyraWings.geometry(buffer, pose, joints, time + pair * 11, pattern);
                         if (charge.active() && charge.fireball() && PyraWingFire.inWorldPass()) {
@@ -120,7 +122,7 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
                             if (strike >= 0) PyraSlashes.sample(player, pose, joints, time, strike);
                         }
                     }
-                    if (!fire && growth < 1) {
+                    if (pass == 1 && !fire && growth < 1) {
                         birthGlow(buffer, pose, joints, growth, formation.dim());
                         if (emitBirth && growth > .02) birthParticles(pose, player, joints, growth);
                     }
@@ -173,7 +175,14 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
     static void geometry(VertexConsumer buffer, PoseStack pose, AngelWingMotion.Joints joints, boolean pyra) {
         for (var feather : AngelFeathers.ALL) {
             feather(buffer, pose.last(), joints, feather,
-                pyra ? AngelFeathers.pyraColor(feather) : feather.normalColor(), pyra);
+                pyra ? AngelFeathers.pyraColor(feather) : feather.normalColor(), pyra, false);
+        }
+    }
+
+    static void glowGeometry(VertexConsumer buffer, PoseStack pose, AngelWingMotion.Joints joints, boolean pyra) {
+        for (var feather : AngelFeathers.ALL) {
+            feather(buffer, pose.last(), joints, feather,
+                pyra ? AngelFeathers.pyraColor(feather) : feather.normalColor(), pyra, true);
         }
     }
 
@@ -184,7 +193,7 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
     }
 
     private static void feather(VertexConsumer buffer, PoseStack.Pose pose, AngelWingMotion.Joints joints,
-            AngelFeathers.Feather feather, int color, boolean pyra) {
+            AngelFeathers.Feather feather, int color, boolean pyra, boolean glow) {
         double forming = AngelFeathers.growth(joints, feather);
         if (forming <= .001) return;
         float alpha = (float) Math.min(1, forming * 2);
@@ -202,28 +211,32 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
             Vec3 rightA = featherPoint(joints, feather, a, wA, .012);
             Vec3 leftB = featherPoint(joints, feather, b, -wB, .012);
             Vec3 rightB = featherPoint(joints, feather, b, wB, .012);
-            float body = (pyra ? .97F : .92F) * alpha, tip = (pyra ? .91F : .84F) * alpha;
-            AngelMesh.quad(buffer, pose, color, body, body, tip, tip, leftA, rightA, rightB, leftB);
-            if (pyra) {
-                for (int face : new int[]{-1, 1}) {
-                    AngelMesh.quad(buffer, pose, quill, .94F * alpha, .94F * alpha, .80F * alpha, .80F * alpha,
-                        veinPoint(joints, feather, a, -.004, face, .016), veinPoint(joints, feather, a, .004, face, .016),
-                        veinPoint(joints, feather, b, .003, face, .016), veinPoint(joints, feather, b, -.003, face, .016));
-                    AngelMesh.quad(buffer, pose, 0xFFF1B3, .94F * alpha, .94F * alpha, .80F * alpha, .80F * alpha,
-                        veinPoint(joints, feather, a, -.0015, face, .021), veinPoint(joints, feather, a, .0015, face, .021),
-                        veinPoint(joints, feather, b, .0012, face, .021), veinPoint(joints, feather, b, -.0012, face, .021));
-                }
-            } else AngelMesh.quad(buffer, pose, quill, .72F * alpha, .72F * alpha, .48F * alpha, .48F * alpha,
-                featherPoint(joints, feather, a, -.004, .025), featherPoint(joints, feather, a, .004, .025),
-                featherPoint(joints, feather, b, .003, .025), featherPoint(joints, feather, b, -.003, .025));
-            AngelMesh.quad(buffer, pose, fringe, fringeRoot * alpha, 0, 0, fringeTip * alpha,
-                leftA, featherPoint(joints, feather, a, -wA - .016, .006),
-                featherPoint(joints, feather, b, -wB - .012, .006), leftB);
-            AngelMesh.quad(buffer, pose, fringe, fringeRoot * alpha, 0, 0, fringeTip * alpha,
-                rightA, featherPoint(joints, feather, a, wA + .016, .006),
-                featherPoint(joints, feather, b, wB + .012, .006), rightB);
+            if (!glow) {
+                float body = (pyra ? .97F : .92F) * alpha, tip = (pyra ? .91F : .84F) * alpha;
+                AngelMesh.quad(buffer, pose, color, body, body, tip, tip, leftA, rightA, rightB, leftB);
+                if (pyra) {
+                    for (int face : new int[]{-1, 1}) {
+                        AngelMesh.quad(buffer, pose, quill, .94F * alpha, .94F * alpha, .80F * alpha, .80F * alpha,
+                            veinPoint(joints, feather, a, -.004, face, .016), veinPoint(joints, feather, a, .004, face, .016),
+                            veinPoint(joints, feather, b, .003, face, .016), veinPoint(joints, feather, b, -.003, face, .016));
+                        AngelMesh.quad(buffer, pose, 0xFFF1B3, .94F * alpha, .94F * alpha, .80F * alpha, .80F * alpha,
+                            veinPoint(joints, feather, a, -.0015, face, .021), veinPoint(joints, feather, a, .0015, face, .021),
+                            veinPoint(joints, feather, b, .0012, face, .021), veinPoint(joints, feather, b, -.0012, face, .021));
+                    }
+                } else AngelMesh.quad(buffer, pose, quill, .72F * alpha, .72F * alpha, .48F * alpha, .48F * alpha,
+                    featherPoint(joints, feather, a, -.004, .025), featherPoint(joints, feather, a, .004, .025),
+                    featherPoint(joints, feather, b, .003, .025), featherPoint(joints, feather, b, -.003, .025));
+            }
+            if (glow) {
+                AngelMesh.quad(buffer, pose, fringe, fringeRoot * alpha, 0, 0, fringeTip * alpha,
+                    leftA, featherPoint(joints, feather, a, -wA - .016, .006),
+                    featherPoint(joints, feather, b, -wB - .012, .006), leftB);
+                AngelMesh.quad(buffer, pose, fringe, fringeRoot * alpha, 0, 0, fringeTip * alpha,
+                    rightA, featherPoint(joints, feather, a, wA + .016, .006),
+                    featherPoint(joints, feather, b, wB + .012, .006), rightB);
+            }
         }
-        if (pyra) veins(buffer, pose, joints, feather, forming, alpha);
+        if (pyra && !glow) veins(buffer, pose, joints, feather, forming, alpha);
     }
 
     private static Vec3 veinPoint(AngelWingMotion.Joints joints, AngelFeathers.Feather feather,
