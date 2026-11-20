@@ -62,7 +62,7 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
         m.previousY = renderY;
         m.hasPosition = true;
         var activity = Angels.wingMotion(player);
-        double attack = (time - view.swing()) / 12;
+        double attack = Angels.retribution(player) ? -1 : (time - view.swing()) / 12;
         boolean combat = view.defending() || Angels.charge(player).active() || attack >= 0 && attack < 1;
         boolean airborne = !player.onGround() && !player.isInWater() && !player.isInLava()
             && !player.onClimbable() && !player.isPassenger();
@@ -79,7 +79,7 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
         double diving = view.fast() ? AngelWingMotion.diveAmount(player.getViewXRot(partial), player.getDeltaMovement().y) : 0;
         m.dive += (diving - m.dive) * blend;
         m.dash += ((view.fast() && view.spin() > time ? 1 : 0) - m.dash) * (1 - Math.exp(-elapsed / 2.5));
-        m.guard += ((view.defending() && !flying && !Angels.inferno(player) ? 1 : 0) - m.guard) * (1 - Math.exp(-elapsed / 2.2));
+        m.guard += ((view.defending() && !flying && !Angels.inferno(player) && !Angels.retribution(player) ? 1 : 0) - m.guard) * (1 - Math.exp(-elapsed / 2.2));
         // Integrating phase prevents animation jumps when speed or flight mode changes.
         double hoverRate = AngelWingMotion.hoverRate(m.vertical);
         double flightRate = hoverRate + m.fast * (.29 + m.effort * .13 - hoverRate);

@@ -94,6 +94,7 @@ final class AngelShackles extends RenderLayer<AbstractClientPlayer, PlayerModel<
             pose.scale((float) width, 1, (float) (arm && !armor && slim ? 1.18 : width));
             cuff.render(pose, buffers.getBuffer(RenderType.entityCutoutNoCull(TEXTURE)), light, OverlayTexture.NO_OVERLAY);
             anchors[i] = point(pose, camera, 0, -.0625, .31);
+            if (live && arm) ChainMesh.capture(player, i, new Vec3(anchors[i].x(), anchors[i].y(), anchors[i].z()));
             if (!live) {
                 // Inventory/entity previews are in GUI space, so they must not feed the live world solver.
                 pose.translate(0, -.0625, .31);
@@ -136,6 +137,15 @@ final class AngelShackles extends RenderLayer<AbstractClientPlayer, PlayerModel<
         for (int i = 0; i < 4; i++) {
             var chain = state.chains[i];
             chain.advance(time, anchors[i], air, collision);
+            double swingAge = time - dev.weaverlib.angel.RetributionCombat.swing(player);
+            boolean mainWrist = i == (player.getMainArm() == net.minecraft.world.entity.HumanoidArm.RIGHT ? 0 : 1);
+            double envelope = dev.weaverlib.angel.ChainCombatRules.swing(swingAge);
+            if (mainWrist && envelope > .001) {
+                Vec3 start = new Vec3(anchors[i].x(), anchors[i].y(), anchors[i].z()).subtract(camera);
+                ChainMesh.whip(new PoseStack(), buffers.getBuffer(ChainMesh.layer()), light, start,
+                    Vec3.directionFromRotation(0, player.getViewYRot(partial)), swingAge, i == 0 ? 1 : -1);
+                continue;
+            }
             for (int n = 0; n < ShackleChainPhysics.LINKS; n++) {
                 Point a = chain.point(n), b = chain.point(n + 1);
                 if (a == null || b == null) continue;

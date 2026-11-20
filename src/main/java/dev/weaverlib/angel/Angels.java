@@ -138,6 +138,7 @@ public final class Angels {
         ATTACHMENTS.register(bus);
         ITEMS.register(bus);
         AngelProgress.register(bus);
+        RetributionCombat.register(bus);
         NeoForge.EVENT_BUS.addListener(Angels::tick);
         NeoForge.EVENT_BUS.addListener(Angels::jumped);
         NeoForge.EVENT_BUS.addListener(Angels::login);
@@ -282,7 +283,11 @@ public final class Angels {
             case AngelAction.DASH -> startDash(player, now);
             case AngelAction.STOP_DASH -> stopDash(player, now);
             case AngelAction.DEFEND -> {
-                if (pyraCanCharge(player)) {
+                if (retribution(player) && !session.fast && canUseWings(player)) {
+                    session.defendUntil = 0;
+                    RetributionCombat.hold(player, now);
+                    if (!flying(player)) session.meleeUsed = now;
+                } else if (pyraCanCharge(player)) {
                     session.defendUntil = 0;
                     holdPyra(player, now);
                     if (!flying(player) && session.charge.held(now)) session.meleeUsed = now;
@@ -294,12 +299,14 @@ public final class Angels {
                 }
             }
             case AngelAction.RELEASE -> {
+                RetributionCombat.release(player);
                 if (!flying(player) && (session.defendUntil >= now || session.charge.started() >= 0))
                     session.meleeUsed = now;
                 session.defendUntil = 0;
                 releasePyra(player, now);
             }
             case AngelAction.CANCEL -> {
+                RetributionCombat.release(player);
                 if (!flying(player) && (session.defendUntil >= now || session.charge.started() >= 0))
                     session.meleeUsed = now;
                 session.defendUntil = 0;
@@ -307,7 +314,7 @@ public final class Angels {
             }
             case AngelAction.FLIGHT -> {
                 if (session.active && now >= session.nextFlight && !player.onGround()
-                        && !player.isInWater() && !player.isPassenger()) {
+                        && !player.isInWater() && !player.isPassenger() && RetributionCombat.binding(player) == null) {
                     cancelPyra(player);
                     session.nextFlight = now + 8;
                     session.fast = !session.fast;
@@ -344,6 +351,7 @@ public final class Angels {
             return;
         }
         var s = session(player);
+        RetributionCombat.clear(player);
         cancelPyra(player);
         // A channel must pay the activation fee for its own aspect, rather than upgrading mid-dash.
         if (s.active) stopDash(player, player.serverLevel().getGameTime());
@@ -388,6 +396,7 @@ public final class Angels {
     private static void revert(ServerPlayer player) {
         boolean fire = inferno(player);
         boolean mundane = retribution(player);
+        RetributionCombat.clear(player);
         cancelPyra(player);
         player.setData(INFERNO, false);
         player.setData(RETRIBUTION, false);
@@ -552,6 +561,10 @@ public final class Angels {
     private static void attack(ServerPlayer player, long now) {
         var s = session(player);
         if (!canUseWings(player) || now < s.nextAttack || s.defendUntil >= now || s.charge.started() >= 0) return;
+        if (retribution(player) && !s.fast) {
+            if (RetributionCombat.attack(player, now) && !player.getAbilities().flying) s.meleeUsed = now;
+            return;
+        }
         if (s.fast) {
             startDash(player, now);
         } else if (player.getAbilities().flying) {
@@ -584,7 +597,7 @@ public final class Angels {
 
     private static void startDash(ServerPlayer player, long now) {
         var s = session(player);
-        if (!s.fast || !canUseWings(player)) return;
+        if (!s.fast || !canUseWings(player) || RetributionCombat.binding(player) != null) return;
         if (s.dash.active(now)) {
             s.dash = s.dash.renew(now);
             return;
@@ -623,7 +636,7 @@ public final class Angels {
             return;
         }
         long now = player.serverLevel().getGameTime();
-        if (s.fast && (player.onGround() || player.isInWater() || player.isPassenger())) {
+        if (s.fast && (player.onGround() || player.isInWater() || player.isPassenger() || RetributionCombat.binding(player) != null)) {
             s.fast = false;
             stopDash(player, now);
             player.stopFallFlying();
@@ -636,6 +649,7 @@ public final class Angels {
             revert(player);
             return;
         }
+        if (retribution(player)) RetributionCombat.tick(player, now);
         AngelSpells.tick(player, s.spells, now);
         if (!s.active) return;
         if (inferno(player) && now % 10 == 0) {

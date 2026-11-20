@@ -136,5 +136,8 @@
   "weaverlib.angel.spell.forge": "Divine Forge",
   "weaverlib.angel.spell_preview_item": "%s · %s Grace/item",
   "weaverlib.angel.hud.retribution": "Nemesis · %s / %s Grace",
-  "weaverlib.angel.hud.retribution_fast": "Nemesis · Fast flight · %s / %s Grace"
+  "weaverlib.angel.hud.retribution_fast": "Nemesis · Fast flight · %s / %s Grace",
+  "entity.weaverlib.angel_chain": "Binding Chains",
+  "death.attack.weaverlib.chain": "%1$s was claimed by %2$s’s chains",
+  "weaverlib.angel.chain_health": "Chains: %s / 25"
 }

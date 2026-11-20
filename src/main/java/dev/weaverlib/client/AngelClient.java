@@ -34,13 +34,19 @@ final class AngelClient {
     AngelClient(IEventBus bus) {
         bus.addListener(this::keys);
         bus.addListener(this::layers);
+        bus.addListener(this::renderers);
         bus.addListener(PyraFire::shaders);
         NeoForge.EVENT_BUS.addListener(this::tick);
         NeoForge.EVENT_BUS.addListener(this::click);
         NeoForge.EVENT_BUS.addListener(this::hud);
         NeoForge.EVENT_BUS.addListener(this::hands);
         NeoForge.EVENT_BUS.addListener(visuals::render);
+        NeoForge.EVENT_BUS.addListener(ChainAttackVisual::render);
         AngelBurst.receiver(visuals::receive);
+    }
+
+    private void renderers(EntityRenderersEvent.RegisterRenderers e) {
+        e.registerEntityRenderer(dev.weaverlib.angel.RetributionCombat.BINDING.get(), ChainBindingRenderer::new);
     }
 
     private void keys(RegisterKeyMappingsEvent e) {
@@ -61,6 +67,9 @@ final class AngelClient {
         var player = client.player;
         if (client.screen != null || player == null || !player.isAlive() || !Angels.view(player).active()
                 || !player.getMainHandItem().isEmpty()) return;
+        // A bound angel must retain ordinary weapon/punch attacks against the restraint entity.
+        if (e.isAttack() && client.hitResult instanceof net.minecraft.world.phys.EntityHitResult hit
+                && hit.getEntity() instanceof dev.weaverlib.angel.ChainBinding chain && chain.owner() != player) return;
         if (e.isAttack() || e.isUseItem()) {
             e.setCanceled(true);
             e.setSwingHand(false);
@@ -113,7 +122,7 @@ final class AngelClient {
         if (dash && (!dashing || player.tickCount % 4 == 0)) send(AngelAction.DASH);
         if (!dash && dashing) send(AngelAction.STOP_DASH);
         dashing = dash;
-        float desiredGuard = Angels.view(player).defending() && !Angels.flying(player) && !Angels.inferno(player) ? 1 : 0;
+        float desiredGuard = Angels.view(player).defending() && !Angels.flying(player) && !Angels.inferno(player) && !Angels.retribution(player) ? 1 : 0;
         guardPose += Math.clamp(desiredGuard - guardPose, -.25F, .25F);
         boolean sprint = client.options.keySprint.isDown();
         if (active && client.screen == null && sprint && !wasSprint && !player.onGround()) {
@@ -131,6 +140,7 @@ final class AngelClient {
         var player = Minecraft.getInstance().player;
         if (player == null || !Angels.view(player).active()
                 || !player.getMainHandItem().isEmpty()) return;
+        if (Angels.retribution(player)) return;
         boolean aerialPyra = Angels.inferno(player) && player.getAbilities().flying && !Angels.view(player).fast();
         if (Angels.flying(player) && !aerialPyra) return;
         float attack = (float) ((player.level().getGameTime() + event.getPartialTick()
