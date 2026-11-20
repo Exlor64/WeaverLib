@@ -13,7 +13,7 @@ import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 
 /** Emissive, time-advected flame material. All Pyra effects are actual surfaces, not particles. */
 final class PyraFire {
-    static final int WING = 0, AURA = 1, TRAIL = 2, CORE = 3, JET = 4;
+    static final int WING = 0, AURA = 1, TRAIL = 2, CORE = 3, JET = 4, GILDED_WING = 5;
     private static ShaderInstance shader;
     private PyraFire() {}
 
@@ -54,16 +54,16 @@ final class PyraFire {
     static void wingQuad(VertexConsumer buffer, PoseStack.Pose pose,
             Vec3 a, Vec3 b, Vec3 c, Vec3 d, double span0, double trail0, double span1, double trail1,
             double alpha0, double alpha1) {
-        vertex(buffer, pose, WING, a, trail0, span0, alpha0);
-        vertex(buffer, pose, WING, b, trail0, span1, alpha0);
-        vertex(buffer, pose, WING, c, trail1, span1, alpha1);
-        vertex(buffer, pose, WING, d, trail1, span0, alpha1);
+        vertex(buffer, pose, GILDED_WING, a, trail0, span0, alpha0);
+        vertex(buffer, pose, GILDED_WING, b, trail0, span1, alpha0);
+        vertex(buffer, pose, GILDED_WING, c, trail1, span1, alpha1);
+        vertex(buffer, pose, GILDED_WING, d, trail1, span0, alpha1);
     }
 
     private static void vertex(VertexConsumer buffer, PoseStack.Pose pose, int role, Vec3 p,
             double u, double v, double alpha) {
         buffer.addVertex(pose, (float) p.x, (float) p.y, (float) p.z)
-            .setUv((float) u, (float) v).setColor(role == CORE ? 32 : role == JET ? 0 : role * 127, role == JET ? 0 : 255, 255,
+            .setUv((float) u, (float) v).setColor(role == CORE ? 32 : role == JET || role == GILDED_WING ? 0 : role * 127, role == JET ? 0 : 255, role == GILDED_WING ? 127 : 255,
                 (int) Math.round(Math.clamp(alpha, 0, 1) * 255));
     }
 }

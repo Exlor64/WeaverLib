@@ -69,37 +69,42 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
         long tick = player.level().getGameTime();
         boolean emitBirth = m.lastBirthParticle != tick && tick % (formation.dim() ? 5 : 2) == 0;
         boolean fire = Angels.inferno(player);
-        var buffer = buffers.getBuffer(fire ? PyraFire.layer() : AngelMesh.layer());
-        if (fire) {
-            double strength = formation.started() < 0 ? 1
-                : AngelWingMotion.smooth((time - formation.started()) / 18);
-            PyraAura.render(buffer, pose, getParentModel(), player, strength * (formation.dim() ? .65 : 1));
-        }
-        pose.pushPose();
-        getParentModel().body.translateAndRotate(pose);
-        for (int pair = 0; pair < view.rank(); pair++) {
-            for (int side = -1; side <= 1; side += 2) {
-                double strike = view.wing() == pair * 2 + (side > 0 ? 1 : 0) ? attack : -1;
-                var normal = AngelWingMotion.sample(m.phase, m.flight, m.fast, m.effort, m.guard, strike, pair, side);
-                normal = AngelWingMotion.aerial(normal, m.dive, m.dash, pair, side);
-                double growth = formation.started() < 0 ? 1
-                    : AngelWingMotion.birthProgress(time - formation.started(), pair);
-                var joints = AngelWingMotion.growing(normal, growth);
-                pose.pushPose();
-                pose.scale(side, 1, 1);
-                if (fire) {
-                    PyraWings.geometry(buffer, pose, joints, time + pair * 11);
-                    PyraTrails.sample(player, pose, joints, time, pair, side);
-                    if (!flying && strike >= 0) PyraSlashes.sample(player, pose, joints, time, strike);
-                } else geometry(buffer, pose, joints);
-                if (!fire && growth < 1) {
-                    birthGlow(buffer, pose, joints, growth, formation.dim());
-                    if (emitBirth && growth > .02) birthParticles(pose, player, joints, growth);
-                }
-                pose.popPose();
+        // Complete the feather pass before the fire pass. Both use the same pose and skeleton;
+        // reacquiring a shared buffer mid-wing would flush it and break translucent ordering.
+        for (int pass = 0; pass < (fire ? 2 : 1); pass++) {
+            var buffer = buffers.getBuffer(pass == 0 ? AngelMesh.layer() : PyraFire.layer());
+            if (pass == 1) {
+                double strength = formation.started() < 0 ? 1
+                    : AngelWingMotion.smooth((time - formation.started()) / 18);
+                PyraAura.render(buffer, pose, getParentModel(), player, strength * (formation.dim() ? .65 : 1));
             }
+            pose.pushPose();
+            getParentModel().body.translateAndRotate(pose);
+            for (int pair = 0; pair < view.rank(); pair++) {
+                for (int side = -1; side <= 1; side += 2) {
+                    double strike = view.wing() == pair * 2 + (side > 0 ? 1 : 0) ? attack : -1;
+                    var normal = AngelWingMotion.sample(m.phase, m.flight, m.fast, m.effort, m.guard, strike, pair, side);
+                    normal = AngelWingMotion.aerial(normal, m.dive, m.dash, pair, side);
+                    double growth = formation.started() < 0 ? 1
+                        : AngelWingMotion.birthProgress(time - formation.started(), pair);
+                    var joints = AngelWingMotion.growing(normal, growth);
+                    pose.pushPose();
+                    pose.scale(side, 1, 1);
+                    if (pass == 0) geometry(buffer, pose, joints, fire);
+                    else {
+                        PyraWings.geometry(buffer, pose, joints, time + pair * 11);
+                        PyraTrails.sample(player, pose, joints, time, pair, side);
+                        if (!flying && strike >= 0) PyraSlashes.sample(player, pose, joints, time, strike);
+                    }
+                    if (!fire && growth < 1) {
+                        birthGlow(buffer, pose, joints, growth, formation.dim());
+                        if (emitBirth && growth > .02) birthParticles(pose, player, joints, growth);
+                    }
+                    pose.popPose();
+                }
+            }
+            pose.popPose();
         }
-        pose.popPose();
         if (emitBirth) m.lastBirthParticle = tick;
     }
 
@@ -138,22 +143,27 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
     }
 
     static void geometry(VertexConsumer buffer, PoseStack pose, AngelWingMotion.Joints joints) {
+        geometry(buffer, pose, joints, false);
+    }
+
+    static void geometry(VertexConsumer buffer, PoseStack pose, AngelWingMotion.Joints joints, boolean pyra) {
         // Long primaries fan from the wrist; shorter overlapping rows fill the arm and cover the roots.
         for (int i = 0; i < 12; i++) {
             double u = .40 + i * .056;
             double length = .93 - i * .026;
             feather(buffer, pose.last(), joints, u, .04, .055, length, .055 + i * .004,
-                i % 2 == 0 ? 0xFFF4C6 : 0xFFE3A2);
+                pyra ? i % 2 == 0 ? 0xFFE4A2 : 0xF3CF78 : i % 2 == 0 ? 0xFFF4C6 : 0xFFE3A2, pyra);
         }
         for (int i = 0; i < 11; i++) {
             double u = .025 + i * .052;
-            feather(buffer, pose.last(), joints, u, .015, .048, .84 + u * .22, .025, 0xFFEAB0);
+            feather(buffer, pose.last(), joints, u, .015, .048, .84 + u * .22, .025, pyra ? 0xEDC575 : 0xFFEAB0, pyra);
         }
         for (int row = 0; row < 2; row++) {
             for (int i = 0; i < 13; i++) {
                 double u = .018 + i * .075;
                 feather(buffer, pose.last(), joints, u, -.035 + row * .11, .045,
-                    .38 + row * .10, .012, row == 0 ? 0xFFF9DE : 0xF9D58D);
+                    .38 + row * .10, .012, pyra ? row == 0 ? 0xFFF0BF : 0xDDB05E
+                        : row == 0 ? 0xFFF9DE : 0xF9D58D, pyra);
             }
         }
     }
@@ -164,7 +174,7 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
     }
 
     private static void feather(VertexConsumer buffer, PoseStack.Pose pose, AngelWingMotion.Joints joints,
-            double u, double start, double width, double length, double lean, int color) {
+            double u, double start, double width, double length, double lean, int color, boolean pyra) {
         double forming = AngelWingMotion.featherGrowth(u, joints.growth());
         if (forming <= .001) return;
         length *= forming;
@@ -182,8 +192,9 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
             Vec3 rightA = point(joints, centerA + wA, vA, .012);
             Vec3 leftB = point(joints, centerB - wB, vB, .012);
             Vec3 rightB = point(joints, centerB + wB, vB, .012);
-            AngelMesh.quad(buffer, pose, color, .92F * alpha, .92F * alpha, .84F * alpha, .84F * alpha, leftA, rightA, rightB, leftB);
-            AngelMesh.quad(buffer, pose, 0xFFFBEA, .72F * alpha, .72F * alpha, .48F * alpha, .48F * alpha,
+            float body = (pyra ? .97F : .92F) * alpha, tip = (pyra ? .91F : .84F) * alpha;
+            AngelMesh.quad(buffer, pose, color, body, body, tip, tip, leftA, rightA, rightB, leftB);
+            AngelMesh.quad(buffer, pose, pyra ? 0xFFF1C4 : 0xFFFBEA, .72F * alpha, .72F * alpha, .48F * alpha, .48F * alpha,
                 point(joints, centerA - .004, vA, .025), point(joints, centerA + .004, vA, .025),
                 point(joints, centerB + .003, vB, .025), point(joints, centerB - .003, vB, .025));
             // A narrow, fading gold fringe avoids the old solid diamond-shaped glow cards.

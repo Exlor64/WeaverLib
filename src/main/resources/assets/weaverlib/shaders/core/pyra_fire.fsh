@@ -29,6 +29,7 @@ void main() {
     bool trail = flameColor.r > 0.75;
     bool core = flameColor.r > 0.06 && flameColor.r < 0.20;
     bool jet = flameColor.g < 0.25;
+    bool gildedWing = flameColor.b < 0.75;
     vec2 uv = flameUV;
     // Eddies advect toward the tips; higher frequencies stretch into fine flame filaments.
     float warp = turbulence(vec2(uv.x * 3.4, uv.y * 2.0 - t * 1.6));
@@ -50,6 +51,12 @@ void main() {
     if (trail) edge *= pow(max(0.0, sin(clamp(uv.x, 0.0, 1.0) * 3.14159)), 0.7);
     vec3 color = mix(vec3(0.55, 0.012, 0.025), vec3(1.0, 0.16, 0.025), smoothstep(0.24, 0.70, heat));
     color = mix(color, vec3(1.0, 0.67, 0.16), smoothstep(0.73, 0.94, heat) * 0.78);
+    if (gildedWing) {
+        // Gold follows the leading edge; red-orange wisps remain visible between and beyond the feathers.
+        float leading = 1.0 - smoothstep(0.04, 0.38, uv.x);
+        float gold = leading * (0.42 + 0.28 * filament) + smoothstep(0.76, 0.94, heat) * 0.24;
+        color = mix(color, vec3(1.0, 0.76, 0.25), min(0.86, gold));
+    }
     if (core) {
         color = mix(vec3(1.0, 0.32, 0.035), vec3(1.0, 0.95, 0.68),
             smoothstep(0.30, 0.84, billow + filament * 0.28));

@@ -139,24 +139,28 @@ final class AngelClient {
         event.setCanceled(true);
         if (event.getHand() != InteractionHand.MAIN_HAND) return;
         var poses = event.getPoseStack();
-        for (int side = -1; side <= 1; side += 2) {
-            poses.pushPose();
-            boolean strikingWing = (Angels.view(player).wing() % 2 == 0 ? -1 : 1) == side;
-            double strike = strikingWing && sweep > 0 ? attack : -1;
-            // Use the same wrapped skeleton as third person; first-person coordinates have +Y up.
-            poses.translate(0, -.04, -.08);
-            poses.scale(side * .85F, -.85F, .85F);
-            var formation = Angels.formation(player);
-            double growth = formation.started() < 0 ? 1 : AngelWingMotion.birthProgress(
-                player.level().getGameTime() + event.getPartialTick() - formation.started(), 0);
-            var joints = AngelWingMotion.sample(player.tickCount * .12, 0, 0, 0, guardPose, strike, 0, side);
-            joints = AngelWingMotion.growing(joints, growth);
-            if (Angels.inferno(player)) {
+        boolean fire = Angels.inferno(player);
+        for (int pass = 0; pass < (fire ? 2 : 1); pass++) {
+            var buffer = event.getMultiBufferSource().getBuffer(pass == 0 ? AngelMesh.layer() : PyraFire.layer());
+            for (int side = -1; side <= 1; side += 2) {
+                poses.pushPose();
+                boolean strikingWing = (Angels.view(player).wing() % 2 == 0 ? -1 : 1) == side;
+                double strike = strikingWing && sweep > 0 ? attack : -1;
+                // Match the two third-person material passes on the same articulated wing.
+                poses.translate(0, -.04, -.08);
+                poses.scale(side * .85F, -.85F, .85F);
+                var formation = Angels.formation(player);
                 double time = player.level().getGameTime() + event.getPartialTick();
-                PyraWings.geometry(event.getMultiBufferSource().getBuffer(PyraFire.layer()), poses, joints, time);
-                if (strike >= 0) PyraSlashes.sample(player, poses, joints, time, strike);
-            } else AngelWings.geometry(event.getMultiBufferSource().getBuffer(AngelMesh.layer()), poses, joints);
-            poses.popPose();
+                double growth = formation.started() < 0 ? 1 : AngelWingMotion.birthProgress(time - formation.started(), 0);
+                var joints = AngelWingMotion.sample(player.tickCount * .12, 0, 0, 0, guardPose, strike, 0, side);
+                joints = AngelWingMotion.growing(joints, growth);
+                if (pass == 0) AngelWings.geometry(buffer, poses, joints, fire);
+                else {
+                    PyraWings.geometry(buffer, poses, joints, time);
+                    if (strike >= 0) PyraSlashes.sample(player, poses, joints, time, strike);
+                }
+                poses.popPose();
+            }
         }
     }
 

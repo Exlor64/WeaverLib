@@ -4,7 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.world.phys.Vec3;
 
-/** Continuous flame membranes with independently curling, tapered tongues at their trailing edges. */
+/** Wispy flame overlay on the articulated golden feathers, flowing shoulder-to-tip. */
 final class PyraWings {
     private PyraWings() {}
 
@@ -16,7 +16,7 @@ final class PyraWings {
                 if (born < .001) continue;
                 for (int band = 0; band < 8; band++) {
                     double v = band / 8.0, w = (band + 1) / 8.0;
-                    double alpha = born * (shell == 0 ? .88 : .32)
+                    double alpha = born * (shell == 0 ? .55 : .18)
                         * AngelWingMotion.smooth(a / .08) * AngelWingMotion.smooth((1 - b) / .08);
                     PyraFire.wingQuad(buffer, pose.last(),
                         point(joints, a, v * .83, time, shell), point(joints, b, v * .83, time, shell),
