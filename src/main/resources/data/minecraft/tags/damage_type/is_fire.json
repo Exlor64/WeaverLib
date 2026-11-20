@@ -2,6 +2,7 @@
   "replace": false,
   "values": [
     "weaverlib:pyra_fire",
-    "weaverlib:pyra_blast"
+    "weaverlib:pyra_blast",
+    "weaverlib:angel_circle"
   ]
 }

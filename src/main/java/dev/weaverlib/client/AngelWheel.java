@@ -2,6 +2,7 @@ package dev.weaverlib.client;
 
 import dev.weaverlib.angel.AngelAction;
 import dev.weaverlib.angel.Angels;
+import dev.weaverlib.angel.AngelSpellRules;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.RenderType;
@@ -76,6 +77,15 @@ final class AngelWheel extends Screen {
             graphics.drawCenteredString(font, NAMES[part], x, y + 8, color);
             if (part == hover) {
                 graphics.drawCenteredString(font, MEANINGS[part], cx, cy + 102, color);
+            }
+        }
+        if (count == 2 && hover >= 0 && hover < rank) {
+            int code = sequence[0] * 9 + sequence[1] * 3 + hover;
+            int spell = AngelSpellRules.spell(code, rank);
+            if (spell >= 0) {
+                var preview = Component.translatable(spell == AngelSpellRules.FORGE ? "weaverlib.angel.spell_preview_item" : "weaverlib.angel.spell_preview",
+                    Component.translatable(AngelSpellRules.key(spell)), AngelSpellRules.cost(spell));
+                graphics.drawCenteredString(font, preview, cx, cy + 118, 0xFFFFE2A0);
             }
         }
         for (int i = 0; i < 3; i++) {

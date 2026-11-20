@@ -233,7 +233,11 @@ public final class Angels {
                 }
                 int form = AngelForms.invocation(action.sequence(), rank(player));
                 if (form < 0) {
-                    player.displayClientMessage(Component.translatable("weaverlib.angel.unwritten"), true);
+                    int spell = AngelSpellRules.spell(action.sequence(), rank(player));
+                    if (spell < 0) player.displayClientMessage(Component.translatable("weaverlib.angel.unwritten"), true);
+                    else if (!session.active) player.displayClientMessage(Component.translatable("weaverlib.angel.need_form"), true);
+                    else AngelSpells.cast(player, session.spells, spell, now);
+                    sync(player);
                     return;
                 }
                 boolean fire = form == AngelForms.INFERNO;
@@ -351,6 +355,7 @@ public final class Angels {
             s.meleeAt = 0;
             s.feathers.clear();
             s.pyraShots.clear();
+            s.spells.clear();
             s.arcAt = 0;
             s.collisionUntil = -1;
         }
@@ -580,6 +585,8 @@ public final class Angels {
             revert(player);
             return;
         }
+        AngelSpells.tick(player, s.spells, now);
+        if (!s.active) return;
         if (inferno(player) && now % 10 == 0) {
             for (Mob mob : player.serverLevel().getEntitiesOfClass(Mob.class, player.getBoundingBox().inflate(3),
                     mob -> mob.isAlive() && mob.distanceToSqr(player) <= 9)) {
@@ -950,6 +957,7 @@ public final class Angels {
     }
 
     private static final class Session {
+        final AngelSpells.State spells = new AngelSpells.State();
         boolean active;
         boolean fast;
         boolean chargeFireball;

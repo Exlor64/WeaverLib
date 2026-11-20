@@ -123,5 +123,16 @@
   "weaverlib.angel.hud.pyra_fast": "Pyra flight · %s / %s Grace",
   "weaverlib.angel.pyra_charge": "%s Grace invested · Release to fire",
   "death.attack.weaverlib.pyra": "%1$s was consumed by %2$s's inferno",
-  "death.attack.weaverlib.pyra.item": "%1$s was consumed by %2$s's inferno using %3$s"
+  "death.attack.weaverlib.pyra.item": "%1$s was consumed by %2$s's inferno using %3$s",
+  "weaverlib.angel.need_form": "Take angel form before invoking this spell.",
+  "weaverlib.angel.no_target": "No target within reach.",
+  "weaverlib.angel.no_smelting": "The held item has no smelting recipe.",
+  "weaverlib.angel.spell_preview": "%s · %s Grace",
+  "weaverlib.angel.spell.healing": "Healing Flames",
+  "weaverlib.angel.spell.smite": "Smite",
+  "weaverlib.angel.spell.repel": "Repel the Wicked",
+  "weaverlib.angel.spell.cleanse": "Cleansing Flames",
+  "weaverlib.angel.spell.circle": "Circle of Flame",
+  "weaverlib.angel.spell.forge": "Divine Forge",
+  "weaverlib.angel.spell_preview_item": "%s · %s Grace/item"
 }

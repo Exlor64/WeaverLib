@@ -92,6 +92,7 @@ public final class AngelRulesTest {
         System.out.println("Passed " + checks + " angel progression and payment checks.");
         AngelVisualRulesTest.run();
         PyraRulesTest.run();
+        AngelSpellRulesTest.run();
         AngelFeatherRulesTest.run();
         PyraFlamePhysicsTest.run();
     }

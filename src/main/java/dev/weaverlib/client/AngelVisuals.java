@@ -25,14 +25,21 @@ final class AngelVisuals {
             effects.clear();
             world = level;
         }
-        if (burst.effect() >= AngelBurst.PYRA_ARC) {
+        if (burst.effect() == AngelBurst.PYRA_ARC || burst.effect() == AngelBurst.PYRA_ORB
+                || burst.effect() == AngelBurst.PYRA_BLAST) {
             effects.removeIf(f -> f.burst().id() == burst.id() &&
                 (f.burst().effect() == AngelBurst.PYRA_ARC || f.burst().effect() == AngelBurst.PYRA_ORB));
         }
+        if (burst.effect() == AngelBurst.ANGEL_HEALING) effects.removeIf(f ->
+            f.burst().effect() == AngelBurst.ANGEL_HEALING && f.burst().id() == burst.id());
         if (effects.size() >= 256) effects.removeFirst();
         int life = burst.effect() == AngelBurst.FEATHER ? 3 : burst.effect() == AngelBurst.PYRA_BEAM
             ? 12 + (int)(10 * Math.log1p(PyraCharge.power(burst.power())) / Math.log(2)) : 22;
         if (burst.effect() == AngelBurst.PYRA_ARC || burst.effect() == AngelBurst.PYRA_ORB) life = 3;
+        if (burst.effect() == AngelBurst.ANGEL_HEALING) life = 80;
+        if (burst.effect() == AngelBurst.ANGEL_SMITE) life = 18;
+        if (burst.effect() == AngelBurst.ANGEL_REPEL) life = 16;
+        if (burst.effect() == AngelBurst.ANGEL_CIRCLE) life = 24;
         effects.add(new Flash(burst, level.getGameTime(), life));
         if (!burst.fire() && (burst.effect() == AngelBurst.AWAKEN || burst.effect() == AngelBurst.IMPACT
                 || burst.effect() == AngelBurst.FEATHER_IMPACT || burst.effect() == AngelBurst.DIM)) {
@@ -60,11 +67,18 @@ final class AngelVisuals {
         }
         long tick = client.level.getGameTime();
         float partial = e.getPartialTick().getGameTimeDeltaPartialTick(false);
-        effects.removeIf(f -> tick - f.started() >= f.life());
+        effects.removeIf(f -> tick - f.started() >= f.life()
+            || f.burst().effect() == AngelBurst.ANGEL_HEALING
+                && client.level.getEntity(f.burst().id()) instanceof net.minecraft.world.entity.player.Player owner
+                && (!owner.isAlive() || !Angels.view(owner).active()));
         var pose = e.getPoseStack().last();
         var camera = e.getCamera().getPosition();
         var buffer = client.renderBuffers().bufferSource().getBuffer(AngelMesh.layer());
         for (var effect : effects) {
+            if (effect.burst().effect() >= AngelBurst.ANGEL_HEALING) {
+                AngelSpellVisual.light(buffer, pose, effect.burst(), camera, tick - effect.started() + partial,
+                    effect.life(), tick + partial, partial);
+            }
             if (effect.burst().fire()) continue;
             float progress = Mth.clamp((tick - effect.started() + partial) / effect.life(), 0, 1);
             Vec3 center = effect.burst().from().subtract(camera);
@@ -108,7 +122,10 @@ final class AngelVisuals {
         for (var effect : effects) {
             if (!effect.burst().fire()) continue;
             float progress = Mth.clamp((tick - effect.started() + partial) / effect.life(), 0, 1);
-            if (effect.burst().effect() == AngelBurst.PYRA_BEAM) {
+            if (effect.burst().effect() >= AngelBurst.ANGEL_HEALING) {
+                AngelSpellVisual.fire(fire, pose, effect.burst(), camera, tick - effect.started() + partial,
+                    effect.life(), tick + partial, partial);
+            } else if (effect.burst().effect() == AngelBurst.PYRA_BEAM) {
                 PyraBeamVisual.beam(fire, pose, effect.burst(), camera,
                     tick - effect.started() + partial, effect.life(), tick + partial);
             } else if (effect.burst().effect() >= AngelBurst.PYRA_ARC) {

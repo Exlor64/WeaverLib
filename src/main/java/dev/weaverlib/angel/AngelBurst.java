@@ -17,6 +17,8 @@ public record AngelBurst(int kind, Vec3 from, Vec3 to, float power, int id) impl
     public AngelBurst(int kind, Vec3 from, Vec3 to) { this(kind, from, to, 0, 0); }
     public AngelBurst(int kind, Vec3 from, Vec3 to, float power) { this(kind, from, to, power, 0); }
     public static final int PYRA_ARC = 6, PYRA_ORB = 7, PYRA_BLAST = 8, PYRA_DASH_BLAST = 9;
+    public static final int ANGEL_HEALING = 10, ANGEL_SMITE = 11, ANGEL_REPEL = 12,
+        ANGEL_CLEANSE = 13, ANGEL_CIRCLE = 14, ANGEL_FORGE = 15;
     public static final int PYRA_BEAM = 5;
     public static final int AWAKEN = 0;
     public static final int DIM = 1;
@@ -24,7 +26,7 @@ public record AngelBurst(int kind, Vec3 from, Vec3 to, float power, int id) impl
     public static final int FEATHER = 3;
     public static final int FEATHER_IMPACT = 4;
     public static final Type<AngelBurst> TYPE =
-        new Type<>(ResourceLocation.fromNamespaceAndPath(WeaverLib.ID, "angel_burst_v3"));
+        new Type<>(ResourceLocation.fromNamespaceAndPath(WeaverLib.ID, "angel_burst_v4"));
     public static final StreamCodec<ByteBuf, AngelBurst> CODEC = StreamCodec.of((buf, burst) -> {
         buf.writeByte(burst.kind());
         write(buf, burst.from());
