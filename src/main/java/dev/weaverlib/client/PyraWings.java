@@ -3,6 +3,8 @@ package dev.weaverlib.client;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.world.phys.Vec3;
+import java.util.ArrayList;
+import java.util.List;
 
 /** Flame roots and vanes sample the same individual feathers as the physical wing. */
 final class PyraWings {
@@ -15,7 +17,6 @@ final class PyraWings {
     static void geometry(VertexConsumer buffer, PoseStack pose, AngelWingMotion.Joints joints,
             double time, long pattern) {
         long accents = AngelFeathers.goldMask(pattern);
-        double strike = Math.clamp(joints.strikeRoll() / Math.toRadians(80), 0, 1);
         for (var feather : AngelFeathers.ALL) {
             // Small coverts carry only occasional wisps; the feather layers stay readable.
             if (feather.covert() && feather.index() % 3 != 0) continue;
@@ -24,7 +25,6 @@ final class PyraWings {
             boolean gold = AngelFeathers.golden(accents, feather);
             var n = AngelFeathers.normal(joints, feather, .58);
             Vec3 normal = new Vec3(n.x(), n.y(), n.z());
-            double phase = feather.index() * 2.399 + (pattern & 1023) * .013;
             double alpha = born * (feather.covert() ? .17 : .38);
             int material = gold ? PyraFire.GILDED_WING : PyraFire.WING;
 
@@ -38,28 +38,28 @@ final class PyraWings {
                     surface(joints,feather,b,wb,normal,.019),surface(joints,feather,b,-wb,normal,.019),
                     0,a,1,b,alpha*.30,alpha*.30);
             }
-            // The fire follows the quill, then peels into a small curl only near the real feather tip.
-            double extra = feather.covert() ? .02 : .12 + .10 * strike;
-            for (int segment = 0; segment < 10; segment++) {
-                double a = segment / 10.0, b = (segment + 1) / 10.0;
-                double ta = .12 + a * (1 + extra), tb = .12 + b * (1 + extra);
-                double wa = feather.width() * .24 * Math.sin(a * Math.PI) * born;
-                double wb = feather.width() * .24 * Math.sin(b * Math.PI) * born;
-                double ca = AngelFeathers.width(joints,feather,ta) * .35 * Math.sin(phase);
-                double cb = AngelFeathers.width(joints,feather,tb) * .35 * Math.sin(phase);
-                double liftA = lift(feather,ta,phase,time), liftB = lift(feather,tb,phase,time);
-                PyraFire.quad(buffer,pose.last(),gold ? PyraFire.GILDED_WING : PyraFire.TRAIL,
-                    surface(joints,feather,ta,ca-wa,normal,liftA),surface(joints,feather,ta,ca+wa,normal,liftA),
-                    surface(joints,feather,tb,cb+wb,normal,liftB),surface(joints,feather,tb,cb-wb,normal,liftB),
-                    0,a,1,b,alpha,alpha);
-            }
         }
     }
 
-    private static double lift(AngelFeathers.Feather feather,double along,double phase,double time) {
-        double peel = AngelWingMotion.smooth((along - .68) / .50);
-        return .024 + peel * (feather.covert() ? .016 : .065)
-            * (.65 + .35 * Math.sin(phase + along * 7 - time * .19));
+    record Source(int id,Vec3 position,Vec3 normal,double width,double heat,boolean gold) {}
+
+    /** Emission points cover the vanes and both wing faces, rather than only the lower feather ends. */
+    static List<Source> sources(AngelWingMotion.Joints joints,long pattern) {
+        var result=new ArrayList<Source>(32);
+        long accents=AngelFeathers.goldMask(pattern);
+        for(var feather:AngelFeathers.ALL) {
+            if(feather.covert()?feather.index()%7!=0:feather.index()%2!=0)continue;
+            double born=AngelFeathers.growth(joints,feather);
+            if(born<.03)continue;
+            double along=.22+(feather.index()%4)*.14;
+            var p=AngelFeathers.point(joints,feather,along,0);
+            var n=AngelFeathers.normal(joints,feather,along);
+            Vec3 center=new Vec3(p.x(),p.y(),p.z()),normal=new Vec3(n.x(),n.y(),n.z());
+            for(int face:new int[]{-1,1})result.add(new Source(feather.index()*2+(face>0?1:0),
+                center.add(normal.scale(face*.028)),normal.scale(face),feather.covert()?.031:.050,
+                born*(feather.covert()?.65:1),AngelFeathers.golden(accents,feather)));
+        }
+        return result;
     }
 
     private static Vec3 surface(AngelWingMotion.Joints joints,AngelFeathers.Feather feather,

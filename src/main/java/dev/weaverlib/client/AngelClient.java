@@ -73,6 +73,7 @@ final class AngelClient {
         var client = Minecraft.getInstance();
         PyraTrails.tick(client.level);
         PyraSlashes.tick(client.level);
+        PyraWingFire.tick(client.level);
         var player = client.player;
         boolean ready = player != null && player.isAlive() && !player.isSpectator()
             && client.getConnection() != null && client.isWindowActive();
@@ -160,6 +161,7 @@ final class AngelClient {
                 if (pass == 0) AngelWings.geometry(buffer, poses, joints, fire, pattern);
                 else {
                     PyraWings.geometry(buffer, poses, joints, time, pattern);
+                    PyraWingFire.capture(player, poses, joints, pattern, pair, side, true);
                     if (strike >= 0) PyraSlashes.sample(player, poses, joints, time, strike);
                 }
                 poses.popPose();

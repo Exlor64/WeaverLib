@@ -31,10 +31,11 @@ void main() {
     bool jet = flameColor.g < 0.25;
     bool gildedWing = flameColor.b < 0.75;
     vec2 uv = flameUV;
+    float variation = flameColor.g > 0.25 && flameColor.g < 0.999 ? (1.0 - flameColor.g) * 37.0 : 0.0;
     // Eddies advect toward the tips; higher frequencies stretch into fine flame filaments.
-    float warp = turbulence(vec2(uv.x * 3.4, uv.y * 2.0 - t * 1.6));
+    float warp = turbulence(vec2(uv.x * 3.4 + variation, uv.y * 2.0 - t * 1.6 + variation * 0.7));
     vec2 flow = vec2(uv.x * (aura ? 6.0 : 8.0) + (warp - 0.5) * 2.3,
-                    uv.y * (jet ? 13.0 : 3.5) - t * (jet ? 6.0 : 2.4));
+                    uv.y * (jet ? 13.0 : 3.5) - t * (jet ? 6.0 : 2.4)) + vec2(variation * 1.3, variation * 0.77);
     float billow = turbulence(flow);
     float filament = noise(flow * vec2(3.8, 0.42) + vec2(warp * 3.0, -t * 0.8));
     float heat = clamp(0.23 + billow * 0.85 + filament * 0.20 - uv.y * 0.26, 0.0, 1.0);

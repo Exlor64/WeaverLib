@@ -107,6 +107,7 @@ final class AngelVisuals {
                     tick - effect.started() + partial, effect.life(), tick + partial);
             } else PyraEffects.burst(fire, pose, effect.burst(), camera, progress);
         }
+        PyraWingFire.render(fire, pose, camera, partial);
         PyraTrails.render(fire, pose, camera, tick, partial);
         PyraSlashes.render(fire, pose, camera, tick, partial);
         for (var player : client.level.players()) {

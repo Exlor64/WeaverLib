@@ -95,6 +95,7 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
                     if (pass == 0) geometry(buffer, pose, joints, fire, pattern);
                     else {
                         PyraWings.geometry(buffer, pose, joints, time + pair * 11, pattern);
+                        PyraWingFire.capture(player, pose, joints, pattern, pair, side, false);
                         PyraTrails.sample(player, pose, joints, time, pair, side);
                         if (!flying && strike >= 0) PyraSlashes.sample(player, pose, joints, time, strike);
                     }
@@ -175,6 +176,12 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
         float alpha = (float) Math.min(1, forming * 2);
         int quill = !pyra ? 0xFFFBEA : gold ? 0xFFF0B8 : 0xEC643F;
         int fringe = !pyra || gold ? 0xFFB63E : 0xDE4A2C;
+        if (pyra) {
+            color = AngelMesh.mix(0, color, .70F);
+            quill = AngelMesh.mix(0, quill, .68F);
+            fringe = AngelMesh.mix(0, fringe, .65F);
+        }
+        float fringeRoot = pyra ? .08F : .20F, fringeTip = pyra ? .06F : .16F;
         for (int band = 0; band < 5; band++) {
             double a = band / 5.0, b = (band + 1) / 5.0;
             double wA = AngelFeathers.width(joints, feather, a), wB = AngelFeathers.width(joints, feather, b);
@@ -187,10 +194,10 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
             AngelMesh.quad(buffer, pose, quill, .72F * alpha, .72F * alpha, .48F * alpha, .48F * alpha,
                 featherPoint(joints, feather, a, -.004, .025), featherPoint(joints, feather, a, .004, .025),
                 featherPoint(joints, feather, b, .003, .025), featherPoint(joints, feather, b, -.003, .025));
-            AngelMesh.quad(buffer, pose, fringe, .20F * alpha, 0, 0, .16F * alpha,
+            AngelMesh.quad(buffer, pose, fringe, fringeRoot * alpha, 0, 0, fringeTip * alpha,
                 leftA, featherPoint(joints, feather, a, -wA - .016, .006),
                 featherPoint(joints, feather, b, -wB - .012, .006), leftB);
-            AngelMesh.quad(buffer, pose, fringe, .20F * alpha, 0, 0, .16F * alpha,
+            AngelMesh.quad(buffer, pose, fringe, fringeRoot * alpha, 0, 0, fringeTip * alpha,
                 rightA, featherPoint(joints, feather, a, wA + .016, .006),
                 featherPoint(joints, feather, b, wB + .012, .006), rightB);
         }

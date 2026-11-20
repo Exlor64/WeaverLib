@@ -36,7 +36,7 @@ final class PyraTrails {
             double time, int pair, int side) {
         var client = Minecraft.getInstance();
         world(client.level);
-        if (joints.growth() < .25 || player.distanceToSqr(client.gameRenderer.getMainCamera().getPosition()) > 64 * 64)
+        if (joints.growth() < .25 || player.getDeltaMovement().lengthSqr() < .015 || player.distanceToSqr(client.gameRenderer.getMainCamera().getPosition()) > 64 * 64)
             return;
         if (TRAILS.size() > 2304) TRAILS.clear();
         long tick = player.level().getGameTime();
@@ -89,7 +89,7 @@ final class PyraTrails {
                     PyraFire.quad(buffer, pose, PyraFire.TRAIL,
                         current.a.add(liftB).subtract(camera), current.b.add(liftB).subtract(camera),
                         previous.b.add(liftA).subtract(camera), previous.a.add(liftA).subtract(camera),
-                        0, ageB / 14, 1, ageA / 14, fadeB * fadeB * .52, fadeA * fadeA * .52);
+                        0, ageB / 14, 1, ageA / 14, fadeB * fadeB * .28, fadeA * fadeA * .28);
                 }
                 previous = current;
             }

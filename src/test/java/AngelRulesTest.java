@@ -93,5 +93,6 @@ public final class AngelRulesTest {
         AngelVisualRulesTest.run();
         PyraRulesTest.run();
         AngelFeatherRulesTest.run();
+        PyraFlamePhysicsTest.run();
     }
 }
