@@ -158,7 +158,7 @@ final class AngelClient {
                 double growth = formation.started() < 0 ? 1 : AngelWingMotion.birthProgress(time - formation.started(), pair);
                 var joints = AngelWingMotion.sample(player.tickCount * .12, 0, 0, 0, guardPose, strike, pair, side);
                 joints = AngelWingMotion.growing(joints, growth);
-                if (pass == 0) AngelWings.geometry(buffer, poses, joints, fire, pattern);
+                if (pass == 0) AngelWings.geometry(buffer, poses, joints, fire);
                 else {
                     PyraWings.geometry(buffer, poses, joints, time, pattern);
                     PyraWingFire.capture(player, poses, joints, pattern, pair, side, true);

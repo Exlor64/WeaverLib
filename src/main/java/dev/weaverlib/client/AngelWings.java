@@ -92,7 +92,7 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
                     pose.scale(side, 1, 1);
                     long pattern = AngelFeathers.seed(player.getUUID().getMostSignificantBits(),
                         player.getUUID().getLeastSignificantBits(), pair, side);
-                    if (pass == 0) geometry(buffer, pose, joints, fire, pattern);
+                    if (pass == 0) geometry(buffer, pose, joints, fire);
                     else {
                         PyraWings.geometry(buffer, pose, joints, time + pair * 11, pattern);
                         if (PyraWingFire.inWorldPass()) {
@@ -152,16 +152,9 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
     }
 
     static void geometry(VertexConsumer buffer, PoseStack pose, AngelWingMotion.Joints joints, boolean pyra) {
-        geometry(buffer, pose, joints, pyra, 0);
-    }
-
-    static void geometry(VertexConsumer buffer, PoseStack pose, AngelWingMotion.Joints joints,
-            boolean pyra, long pattern) {
-        long accents = pyra ? AngelFeathers.goldMask(pattern) : 0;
         for (var feather : AngelFeathers.ALL) {
-            boolean gold = pyra && AngelFeathers.golden(accents, feather);
             feather(buffer, pose.last(), joints, feather,
-                pyra ? AngelFeathers.pyraColor(feather, gold) : feather.normalColor(), pyra, gold);
+                pyra ? AngelFeathers.pyraColor(feather) : feather.normalColor(), pyra);
         }
     }
 
@@ -172,15 +165,14 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
     }
 
     private static void feather(VertexConsumer buffer, PoseStack.Pose pose, AngelWingMotion.Joints joints,
-            AngelFeathers.Feather feather, int color, boolean pyra, boolean gold) {
+            AngelFeathers.Feather feather, int color, boolean pyra) {
         double forming = AngelFeathers.growth(joints, feather);
         if (forming <= .001) return;
         float alpha = (float) Math.min(1, forming * 2);
-        int quill = !pyra ? 0xFFFBEA : gold ? 0xFFF0B8 : 0xEC643F;
-        int fringe = !pyra || gold ? 0xFFB63E : 0xDE4A2C;
+        int quill = pyra ? 0xFFCD60 : 0xFFFBEA;
+        int fringe = pyra ? 0xDE4A2C : 0xFFB63E;
         if (pyra) {
             color = AngelMesh.mix(0, color, .70F);
-            quill = AngelMesh.mix(0, quill, .68F);
             fringe = AngelMesh.mix(0, fringe, .65F);
         }
         float fringeRoot = pyra ? .08F : .20F, fringeTip = pyra ? .06F : .16F;
@@ -193,7 +185,16 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
             Vec3 rightB = featherPoint(joints, feather, b, wB, .012);
             float body = (pyra ? .97F : .92F) * alpha, tip = (pyra ? .91F : .84F) * alpha;
             AngelMesh.quad(buffer, pose, color, body, body, tip, tip, leftA, rightA, rightB, leftB);
-            AngelMesh.quad(buffer, pose, quill, .72F * alpha, .72F * alpha, .48F * alpha, .48F * alpha,
+            if (pyra) {
+                for (int face : new int[]{-1, 1}) {
+                    AngelMesh.quad(buffer, pose, quill, .94F * alpha, .94F * alpha, .80F * alpha, .80F * alpha,
+                        veinPoint(joints, feather, a, -.004, face, .016), veinPoint(joints, feather, a, .004, face, .016),
+                        veinPoint(joints, feather, b, .003, face, .016), veinPoint(joints, feather, b, -.003, face, .016));
+                    AngelMesh.quad(buffer, pose, 0xFFF1B3, .94F * alpha, .94F * alpha, .80F * alpha, .80F * alpha,
+                        veinPoint(joints, feather, a, -.0015, face, .021), veinPoint(joints, feather, a, .0015, face, .021),
+                        veinPoint(joints, feather, b, .0012, face, .021), veinPoint(joints, feather, b, -.0012, face, .021));
+                }
+            } else AngelMesh.quad(buffer, pose, quill, .72F * alpha, .72F * alpha, .48F * alpha, .48F * alpha,
                 featherPoint(joints, feather, a, -.004, .025), featherPoint(joints, feather, a, .004, .025),
                 featherPoint(joints, feather, b, .003, .025), featherPoint(joints, feather, b, -.003, .025));
             AngelMesh.quad(buffer, pose, fringe, fringeRoot * alpha, 0, 0, fringeTip * alpha,
@@ -202,6 +203,44 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
             AngelMesh.quad(buffer, pose, fringe, fringeRoot * alpha, 0, 0, fringeTip * alpha,
                 rightA, featherPoint(joints, feather, a, wA + .016, .006),
                 featherPoint(joints, feather, b, wB + .012, .006), rightB);
+        }
+        if (pyra) veins(buffer, pose, joints, feather, forming, alpha);
+    }
+
+    private static Vec3 veinPoint(AngelWingMotion.Joints joints, AngelFeathers.Feather feather,
+            double along, double offset, int face, double lift) {
+        var p = AngelFeathers.point(joints, feather, along, offset);
+        var n = AngelFeathers.normal(joints, feather, along);
+        return new Vec3(p.x(), p.y(), p.z() - .012)
+            .add(n.x() * face * lift, n.y() * face * lift, n.z() * face * lift);
+    }
+
+    /** Branching gold barbs stay on each vane, including during folding and the twisting melee strike. */
+    private static void veins(VertexConsumer buffer, PoseStack.Pose pose, AngelWingMotion.Joints joints,
+            AngelFeathers.Feather feather, double forming, float alpha) {
+        int pairs = feather.covert() ? 2 : 4;
+        for (int branch = 0; branch < pairs; branch++) {
+            double root = .15 + branch * (.64 / Math.max(1, pairs - 1));
+            for (int side : new int[]{-1, 1}) {
+                for (int segment = 0; segment < 3; segment++) {
+                    double a = segment / 3.0, b = (segment + 1) / 3.0;
+                    double ta = root + a * .12, tb = root + b * .12;
+                    double ua = side * AngelFeathers.width(joints, feather, ta) * .87 * Math.pow(a, .8);
+                    double ub = side * AngelFeathers.width(joints, feather, tb) * .87 * Math.pow(b, .8);
+                    for (int face : new int[]{-1, 1}) {
+                        Vec3 p = veinPoint(joints, feather, ta, ua, face, .018);
+                        Vec3 q = veinPoint(joints, feather, tb, ub, face, .018);
+                        Vec3 tangent = q.subtract(p);
+                        if (tangent.lengthSqr() < 1e-10) continue;
+                        var n = AngelFeathers.normal(joints, feather, (ta + tb) * .5);
+                        Vec3 across = new Vec3(n.x(), n.y(), n.z()).cross(tangent).normalize();
+                        double wa = .0024 * forming * (1 - a * .45), wb = .0024 * forming * (1 - b * .45);
+                        AngelMesh.quad(buffer, pose, 0xFFD773, .88F * alpha, .88F * alpha, .72F * alpha, .72F * alpha,
+                            p.subtract(across.scale(wa)), p.add(across.scale(wa)),
+                            q.add(across.scale(wb)), q.subtract(across.scale(wb)));
+                    }
+                }
+            }
         }
     }
 }

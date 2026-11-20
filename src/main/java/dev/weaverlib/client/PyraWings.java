@@ -16,17 +16,15 @@ final class PyraWings {
 
     static void geometry(VertexConsumer buffer, PoseStack pose, AngelWingMotion.Joints joints,
             double time, long pattern) {
-        long accents = AngelFeathers.goldMask(pattern);
         for (var feather : AngelFeathers.ALL) {
             // Small coverts carry only occasional wisps; the feather layers stay readable.
             if (feather.covert() && feather.index() % 3 != 0) continue;
             double born = AngelFeathers.growth(joints, feather);
             if (born <= .001) continue;
-            boolean gold = AngelFeathers.golden(accents, feather);
             var n = AngelFeathers.normal(joints, feather, .58);
             Vec3 normal = new Vec3(n.x(), n.y(), n.z());
             double alpha = born * (feather.covert() ? .17 : .38);
-            int material = gold ? PyraFire.GILDED_WING : PyraFire.WING;
+            int material = PyraFire.WING;
 
             // A faint wash lies inside each vane's exact taper instead of bridging the gaps between feathers.
             for (int band = 0; band < 5; band++) {
@@ -46,7 +44,6 @@ final class PyraWings {
     /** Emission points cover the vanes and both wing faces, rather than only the lower feather ends. */
     static List<Source> sources(AngelWingMotion.Joints joints,long pattern) {
         var result=new ArrayList<Source>(32);
-        long accents=AngelFeathers.goldMask(pattern);
         for(var feather:AngelFeathers.ALL) {
             if(feather.covert()?feather.index()%7!=0:feather.index()%2!=0)continue;
             double born=AngelFeathers.growth(joints,feather);
@@ -57,7 +54,7 @@ final class PyraWings {
             Vec3 center=new Vec3(p.x(),p.y(),p.z()),normal=new Vec3(n.x(),n.y(),n.z());
             for(int face:new int[]{-1,1})result.add(new Source(feather.index()*2+(face>0?1:0),
                 center.add(normal.scale(face*.028)),normal.scale(face),feather.covert()?.031:.050,
-                born*(feather.covert()?.65:1),AngelFeathers.golden(accents,feather)));
+                born*(feather.covert()?.65:1),false));
         }
         return result;
     }

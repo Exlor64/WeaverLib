@@ -2,7 +2,7 @@ import dev.weaverlib.client.AngelFeathers;
 import dev.weaverlib.client.AngelWingMotion;
 import java.util.HashSet;
 
-/** Feather anchors and stable accent patterns are shared by solid wings and attached flames. */
+/** Feather anchors and crimson feather colors are shared by solid wings and attached flames. */
 public final class AngelFeatherRulesTest {
     private static int checks;
     private static void check(boolean value) {
@@ -14,19 +14,12 @@ public final class AngelFeatherRulesTest {
         var patterns=new HashSet<Long>();
         for (int player=0;player<64;player++) for(int pair=0;pair<3;pair++) for(int side:new int[]{-1,1}) {
             long seed=AngelFeathers.seed(player*713L,player*997L,pair,side);
-            long mask=AngelFeathers.goldMask(seed);
-            patterns.add(mask);
-            check(mask==AngelFeathers.goldMask(seed));
-            check(Long.bitCount(mask)==AngelFeathers.GOLD_COUNT);
-            check(mask>>>49==0);
-            int golden=0;
+            patterns.add(seed);
+            check(seed==AngelFeathers.seed(player*713L,player*997L,pair,side));
             for(var feather:AngelFeathers.ALL) {
-                boolean gold=AngelFeathers.golden(mask,feather);
-                if(gold)golden++;
-                int rgb=AngelFeathers.pyraColor(feather,gold);
-                check(gold ? (rgb>>8&255)>160 : (rgb>>16&255)>(rgb>>8&255)*1.7);
+                int rgb=AngelFeathers.pyraColor(feather);
+                check((rgb>>16&255)>(rgb>>8&255)*1.7); // every physical Pyra vane is crimson, with no gold fill
             }
-            check(golden==5);
         }
         check(patterns.size()>350);
         for(int pose=0;pose<6;pose++) {
@@ -46,6 +39,6 @@ public final class AngelFeatherRulesTest {
                 }
             }
         }
-        System.out.println("Passed " + checks + " feather anchoring and stable gold-pattern checks.");
+        System.out.println("Passed " + checks + " feather anchoring and uniform crimson-palette checks.");
     }
 }

@@ -8,7 +8,6 @@ public final class AngelFeathers {
     public record Feather(int index, double span, double start, double width, double length, double lean,
                           int normalColor, boolean covert) {}
     public static final List<Feather> ALL = layout();
-    public static final int GOLD_COUNT = 5;
     private AngelFeathers() {}
 
     private static List<Feather> layout() {
@@ -30,20 +29,7 @@ public final class AngelFeathers {
             ^ (side < 0 ? 0x6A09E667F3BCC909L : 0xBB67AE8584CAA73BL));
     }
 
-    /** Exactly five scattered accents per wing, stable across frames, clients and reconnects. */
-    public static long goldMask(long seed) {
-        long mask = 0;
-        for (long n = 0; Long.bitCount(mask) < GOLD_COUNT; n++) {
-            int index = (int)Math.floorMod(mix(seed + n * 0x9E3779B97F4A7C15L), ALL.size());
-            mask |= 1L << index;
-        }
-        return mask;
-    }
-
-    public static boolean golden(long mask, Feather feather) { return (mask & 1L << feather.index()) != 0; }
-
-    public static int pyraColor(Feather feather, boolean gold) {
-        if (gold) return feather.index() % 2 == 0 ? 0xFFDE8C : 0xEBC064;
+    public static int pyraColor(Feather feather) {
         return switch (feather.index() % 4) {
             case 0 -> 0xD03E31;
             case 1 -> 0xC0342F;

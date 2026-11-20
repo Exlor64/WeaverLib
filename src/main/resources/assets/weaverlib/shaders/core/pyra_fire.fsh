@@ -53,7 +53,7 @@ void main() {
     vec3 color = mix(vec3(0.55, 0.012, 0.025), vec3(1.0, 0.16, 0.025), smoothstep(0.24, 0.70, heat));
     color = mix(color, vec3(1.0, 0.67, 0.16), smoothstep(0.73, 0.94, heat) * 0.78);
     if (gildedWing) {
-        // Only the scattered golden feathers use this material, including their attached fire.
+        // Optional gold tint for specialized flame surfaces.
         float gold = 0.32 + 0.42 * filament + 0.12 * heat;
         color = mix(color, vec3(1.0, 0.76, 0.25), min(0.86, gold));
     }
