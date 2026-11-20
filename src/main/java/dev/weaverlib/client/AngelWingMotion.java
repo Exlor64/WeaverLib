@@ -87,9 +87,9 @@ public final class AngelWingMotion {
         return new Joints(target.root, elbow, wrist, tip, target.recovery, target.guard, target.strikeRoll, p);
     }
 
-    /** Hover cadence is 30% below the original rate; normal ascent/descent varies it by up to 40%. */
+    /** Hover cadence is 44% below the original rate (30% reduction, then another 20%); normal ascent/descent varies it by up to 40%. */
     public static double hoverRate(double verticalSpeed) {
-        return (.29 + .88 * .13) * .70 * (1 + Math.clamp(verticalSpeed / .15, -1, 1) * .40);
+        return (.29 + .88 * .13) * .56 * (1 + Math.clamp(verticalSpeed / .15, -1, 1) * .40);
     }
 
     public static double smooth(double t) {
