@@ -15,7 +15,7 @@ public final class PyraWingMotion {
         double scale = slashScale(phase);
         return new AngelWingMotion.Joints(j.root(), stretch(j.root(), j.elbow(), scale),
             stretch(j.root(), j.wrist(), scale), stretch(j.root(), j.tip(), scale),
-            j.recovery(), j.guard(), j.strikeRoll(), j.growth(), j.streamline());
+            j.recovery(), j.guard(), j.strikeRoll(), j.growth(), j.streamline(), j.resting());
     }
     private static AngelWingMotion.Point stretch(AngelWingMotion.Point root, AngelWingMotion.Point p, double size) {
         return new AngelWingMotion.Point(root.x() + (p.x() - root.x()) * size,
@@ -42,6 +42,6 @@ public final class PyraWingMotion {
         var wrist = new AngelWingMotion.Point(.65, tip.y() + .06, tip.z() * .65);
         return new AngelWingMotion.Joints(root, blend(j.elbow(), elbow, AngelWingMotion.smooth(elapsed / 10)),
             blend(j.wrist(), wrist, AngelWingMotion.smooth((elapsed - 3) / 14)), blend(j.tip(), tip, p),
-            j.recovery() * (1 - p), 0, j.strikeRoll() * (1 - p), j.growth(), p);
+            j.recovery() * (1 - p), 0, j.strikeRoll() * (1 - p), j.growth(), p, j.resting());
     }
 }

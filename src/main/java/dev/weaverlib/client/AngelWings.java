@@ -23,6 +23,9 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
 
     private static final class Motion {
         double lastTime, phase, flight, fast, effort = .7, guard, previousSpeed, vertical, dive, dash, gather;
+        double previousY;
+        final AngelGroundMotion ground = new AngelGroundMotion();
+        boolean hasPosition;
         long lastBirthParticle = Long.MIN_VALUE;
         Motion(double time) { lastTime = time; }
     }
@@ -50,11 +53,27 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
         double acceleration = elapsed > .001 ? (velocity - m.previousSpeed) / elapsed : 0;
         m.previousSpeed = velocity;
         boolean flying = Angels.flying(player);
+        double renderY = player.getPosition(partial).y;
+        double verticalSpeed = player.getDeltaMovement().y;
+        if (player != Minecraft.getInstance().player && m.hasPosition && elapsed > .001) {
+            double displacement = renderY - m.previousY;
+            if (Math.abs(displacement) <= 3) verticalSpeed = displacement / elapsed;
+        }
+        m.previousY = renderY;
+        m.hasPosition = true;
+        var activity = Angels.wingMotion(player);
+        double attack = (time - view.swing()) / 12;
+        boolean combat = view.defending() || Angels.charge(player).active() || attack >= 0 && attack < 1;
+        boolean airborne = !player.onGround() && !player.isInWater() && !player.isInLava()
+            && !player.onClimbable() && !player.isPassenger();
+        var ground = m.ground.sample(time, activity.activity(), activity.jumped(), player.onGround(),
+            airborne, flying, combat, verticalSpeed);
         double effort = view.fast() ? Math.clamp(.18 + Math.max(0, -player.getXRot()) / 65
-            + Math.max(0, 1.15 - velocity) * .65 + Math.max(0, acceleration) * 5, .08, 1) : .88;
+            + Math.max(0, 1.15 - velocity) * .65 + Math.max(0, acceleration) * 5, .08, 1)
+            : flying ? .88 : ground.effort();
         double blend = 1 - Math.exp(-elapsed / 4);
         m.effort += (effort - m.effort) * blend;
-        m.vertical += (player.getDeltaMovement().y - m.vertical) * blend;
+        m.vertical += (verticalSpeed - m.vertical) * blend;
         m.flight += ((flying ? 1 : 0) - m.flight) * blend;
         m.fast = AngelFlightPose.sample(player, partial).blend();
         double diving = view.fast() ? AngelWingMotion.diveAmount(player.getViewXRot(partial), player.getDeltaMovement().y) : 0;
@@ -64,8 +83,11 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
         // Integrating phase prevents animation jumps when speed or flight mode changes.
         double hoverRate = AngelWingMotion.hoverRate(m.vertical);
         double flightRate = hoverRate + m.fast * (.29 + m.effort * .13 - hoverRate);
-        m.phase = (m.phase + elapsed * (.075 + m.flight * (flightRate - .075))) % Math.TAU;
-        double attack = (time - view.swing()) / 12;
+        double groundRate = .075 + ground.airborne() * (ground.rate() - .075);
+        if (ground.takeoff()) m.phase = 0;
+        m.phase = (m.phase + elapsed * (groundRate + m.flight * (flightRate - groundRate))) % Math.TAU;
+        double wingFlight = m.flight + ground.airborne() * (1 - m.flight);
+        double resting = ground.folded() * (1 - ground.airborne()) * (1 - m.flight);
         var formation = Angels.formation(player);
         long tick = player.level().getGameTime();
         boolean emitBirth = m.lastBirthParticle != tick && tick % (formation.dim() ? 5 : 2) == 0;
@@ -89,7 +111,8 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
             for (int pair = 0; pair < view.rank(); pair++) {
                 for (int side = -1; side <= 1; side += 2) {
                     double strike = view.wing() == pair * 2 + (side > 0 ? 1 : 0) ? attack : -1;
-                    var normal = AngelWingMotion.sample(m.phase, m.flight, m.fast, m.effort, m.guard, strike, pair, side);
+                    var normal = AngelWingMotion.sample(m.phase, wingFlight, m.fast, m.effort, m.guard, strike, pair, side);
+                    normal = AngelWingMotion.resting(normal, resting, m.phase, pair);
                     normal = AngelWingMotion.aerial(normal, m.dive, m.dash, pair, side);
                     var charge = Angels.charge(player);
                     if (fire && flying && !view.fast()) {

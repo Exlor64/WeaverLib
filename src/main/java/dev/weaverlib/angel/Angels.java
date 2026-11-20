@@ -77,6 +77,15 @@ public final class Angels {
         public static final Formation NONE = new Formation(-1, false);
     }
 
+    public record WingMotion(long activity, long jumped) {
+        public static final WingMotion NONE = new WingMotion(-1, -1);
+    }
+    private static final StreamCodec<io.netty.buffer.ByteBuf, WingMotion> WING_MOTION_CODEC = StreamCodec.composite(
+        ByteBufCodecs.VAR_LONG, WingMotion::activity, ByteBufCodecs.VAR_LONG, WingMotion::jumped, WingMotion::new);
+    private static final DeferredHolder<AttachmentType<?>, AttachmentType<WingMotion>> WING_MOTION =
+        ATTACHMENTS.register("angel_wing_motion", () -> AttachmentType.builder(() -> WingMotion.NONE)
+            .sync(WING_MOTION_CODEC).build());
+
     private static final StreamCodec<io.netty.buffer.ByteBuf, Formation> FORMATION_CODEC = StreamCodec.composite(
         ByteBufCodecs.VAR_LONG, Formation::started, ByteBufCodecs.BOOL, Formation::dim, Formation::new);
     private static final DeferredHolder<AttachmentType<?>, AttachmentType<Formation>> FORMATION =
@@ -126,6 +135,7 @@ public final class Angels {
         ITEMS.register(bus);
         AngelProgress.register(bus);
         NeoForge.EVENT_BUS.addListener(Angels::tick);
+        NeoForge.EVENT_BUS.addListener(Angels::jumped);
         NeoForge.EVENT_BUS.addListener(Angels::login);
         NeoForge.EVENT_BUS.addListener(Angels::logout);
         NeoForge.EVENT_BUS.addListener(Angels::respawn);
@@ -157,6 +167,18 @@ public final class Angels {
 
     public static Formation formation(Player player) {
         return player.getExistingData(FORMATION).orElse(Formation.NONE);
+    }
+
+    public static WingMotion wingMotion(Player player) {
+        return player.getExistingData(WING_MOTION).orElse(WingMotion.NONE);
+    }
+
+    private static void jumped(net.neoforged.neoforge.event.entity.living.LivingEvent.LivingJumpEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        var s = player.getExistingData(SESSION).orElse(null);
+        if (s == null || !s.active || s.fast || player.getAbilities().flying) return;
+        s.jumpedAt = player.serverLevel().getGameTime();
+        sync(player);
     }
 
     public static long dashStarted(Player player) {
@@ -251,17 +273,23 @@ public final class Angels {
                 if (pyraCanCharge(player)) {
                     session.defendUntil = 0;
                     holdPyra(player, now);
+                    if (!flying(player) && session.charge.held(now)) session.meleeUsed = now;
                 } else if (canUseWings(player)) {
                     cancelPyra(player);
                     if (session.defendUntil < now) session.defendStarted = now;
                     session.defendUntil = now + 8;
+                    if (!flying(player)) session.meleeUsed = now;
                 }
             }
             case AngelAction.RELEASE -> {
+                if (!flying(player) && (session.defendUntil >= now || session.charge.started() >= 0))
+                    session.meleeUsed = now;
                 session.defendUntil = 0;
                 releasePyra(player, now);
             }
             case AngelAction.CANCEL -> {
+                if (!flying(player) && (session.defendUntil >= now || session.charge.started() >= 0))
+                    session.meleeUsed = now;
                 session.defendUntil = 0;
                 cancelPyra(player);
             }
@@ -309,6 +337,8 @@ public final class Angels {
         s.meleeAt = 0;
         s.arcAt = 0;
         s.collisionUntil = -1;
+        s.meleeUsed = player.serverLevel().getGameTime();
+        s.jumpedAt = -1;
         player.setData(INFERNO, fire);
         float hoverSpeed = fire ? .05F : (float) SLOW_SPEED;
         player.setData(FORMATION, new Formation(player.serverLevel().getGameTime(), !sunlight));
@@ -529,6 +559,7 @@ public final class Angels {
             s.swing = now;
             s.wing = player.getRandom().nextInt(rank(player) * 2);
             s.meleeAt = now + 4;
+            s.meleeUsed = now;
             player.serverLevel().playSound(null, player, SoundEvents.PLAYER_ATTACK_SWEEP,
                 SoundSource.PLAYERS, .65F, 1.25F);
         }
@@ -825,6 +856,8 @@ public final class Angels {
             active && s.fast, active && s.defendUntil >= now && now >= s.shieldDisabledUntil,
             s == null ? 0 : s.wing, s == null ? 0 : s.swing, active ? s.dash.until() : 0);
         if (!next.equals(view(player))) player.setData(VIEW, next);
+        WingMotion motion = active ? new WingMotion(s.meleeUsed, s.jumpedAt) : WingMotion.NONE;
+        if (!motion.equals(wingMotion(player))) player.setData(WING_MOTION, motion);
     }
 
     private static void burst(ServerPlayer player, int kind, Vec3 from, Vec3 to) {
@@ -978,6 +1011,8 @@ public final class Angels {
         long nextFlight;
         long swing;
         long meleeAt;
+        long meleeUsed = -1;
+        long jumpedAt = -1;
         int wing;
         AngelDash dash = AngelDash.NONE;
         PyraCharge charge = PyraCharge.NONE;

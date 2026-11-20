@@ -91,6 +91,7 @@ public final class AngelRulesTest {
         check(equal(AngelDash.START_COST, 10));
         System.out.println("Passed " + checks + " angel progression and payment checks.");
         AngelVisualRulesTest.run();
+        AngelGroundRulesTest.run();
         PyraRulesTest.run();
         AngelSpellRulesTest.run();
         AngelFeatherRulesTest.run();
