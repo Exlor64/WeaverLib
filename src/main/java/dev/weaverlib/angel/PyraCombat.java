@@ -12,10 +12,19 @@ public final class PyraCombat {
     public static final double DASH_BLAST_COST = 40;
     public static final double COLLISION_PER_DAMAGE = 2;
     public static final double DASH_START_COST = 30;
-    public static final double DASH_PER_TICK = 30.0 / 20;
+    public static final double DASH_PER_TICK = 15.0 / 20;
     public static final float DASH_DAMAGE = 30;
+    public static final double DASH_HIT_COST = 10;
     public static final double MANTLE_MULTIPLIER = 3;
     private PyraCombat() {}
+
+    /** Failed or unaffordable hits spend nothing; the server applies the fee only after accepted damage. */
+    public static boolean dashHit(java.util.function.BooleanSupplier canPay,
+            java.util.function.BooleanSupplier damage, Runnable spend) {
+        if (!canPay.getAsBoolean() || !damage.getAsBoolean()) return false;
+        spend.run();
+        return true;
+    }
 
     public static double fireballPower(double invested) {
         return Double.isFinite(invested) ? Math.max(0, (invested - FIREBALL_START) / 100) : 0;

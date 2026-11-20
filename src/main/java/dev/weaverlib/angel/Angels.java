@@ -725,8 +725,13 @@ public final class Angels {
                     || !player.hasLineOfSight(target)) continue;
             s.spinHits.add(target.getUUID());
             boolean fire = inferno(player);
-            boolean damaged = target.hurt(player.damageSources().playerAttack(player), fire ? PyraCombat.DASH_DAMAGE : 9);
-            if (fire && damaged) target.igniteForSeconds(6);
+            boolean damaged = fire ? PyraCombat.dashHit(
+                () -> AngelFuel.pay(player, PyraCombat.DASH_HIT_COST, false),
+                () -> target.hurt(player.damageSources().playerAttack(player), PyraCombat.DASH_DAMAGE),
+                () -> pay(player, PyraCombat.DASH_HIT_COST))
+                : target.hurt(player.damageSources().playerAttack(player), 9);
+            if (fire && !damaged) continue;
+            if (fire) target.igniteForSeconds(6);
             target.knockback(.9, -motion.x, -motion.z);
             burst(player, AngelBurst.IMPACT, target.position().add(0, .7, 0), target.position());
         }

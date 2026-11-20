@@ -14,6 +14,21 @@ public final class PyraRulesTest {
 
     public static void run() {
         check(equal(PyraCombat.MELEE_DAMAGE,15));
+        check(equal(PyraCombat.DASH_PER_TICK * 20,15));
+        double[] reserve = {25};
+        int[] attempts = {0}, paidHits = {0};
+        var affordable = (java.util.function.BooleanSupplier) () -> reserve[0] >= PyraCombat.DASH_HIT_COST;
+        var hurt = (java.util.function.BooleanSupplier) () -> { attempts[0]++; return true; };
+        Runnable spend = () -> { reserve[0] -= PyraCombat.DASH_HIT_COST; paidHits[0]++; };
+        check(PyraCombat.dashHit(affordable, hurt, spend));
+        check(equal(reserve[0],15) && attempts[0]==1 && paidHits[0]==1);
+        // Canceled/immune hits are not charged, and insufficient fuel must prevent the damage callback.
+        check(!PyraCombat.dashHit(affordable, () -> false, spend));
+        check(equal(reserve[0],15) && paidHits[0]==1);
+        check(PyraCombat.dashHit(affordable, hurt, spend));
+        check(equal(reserve[0],5) && attempts[0]==2 && paidHits[0]==2);
+        check(!PyraCombat.dashHit(affordable, hurt, spend));
+        check(equal(reserve[0],5) && attempts[0]==2 && paidHits[0]==2);
         check(equal(PyraCharge.PER_TICK*20,50));
         check(!PyraCharge.NONE.held(0));
         var charge=PyraCharge.begin(100);
