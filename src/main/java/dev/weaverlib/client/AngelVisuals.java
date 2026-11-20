@@ -25,10 +25,10 @@ final class AngelVisuals {
             world = level;
         }
         if (effects.size() >= 128) effects.removeFirst();
-        effects.add(new Flash(burst, level.getGameTime(), burst.kind() == AngelBurst.FEATHER ? 3 : 22));
-        if (burst.kind() == AngelBurst.AWAKEN || burst.kind() == AngelBurst.IMPACT
-                || burst.kind() == AngelBurst.FEATHER_IMPACT || burst.kind() == AngelBurst.DIM) {
-            int count = burst.kind() == AngelBurst.DIM ? 5 : 28;
+        effects.add(new Flash(burst, level.getGameTime(), burst.effect() == AngelBurst.FEATHER ? 3 : 22));
+        if (!burst.fire() && (burst.effect() == AngelBurst.AWAKEN || burst.effect() == AngelBurst.IMPACT
+                || burst.effect() == AngelBurst.FEATHER_IMPACT || burst.effect() == AngelBurst.DIM)) {
+            int count = burst.effect() == AngelBurst.DIM ? 5 : 28;
             for (int i = 0; i < count; i++) {
                 double angle = i * Math.TAU / count;
                 level.addParticle(ParticleTypes.FLAME, burst.from().x, burst.from().y + .8, burst.from().z,
@@ -56,15 +56,16 @@ final class AngelVisuals {
         var camera = e.getCamera().getPosition();
         var buffer = client.renderBuffers().bufferSource().getBuffer(AngelMesh.layer());
         for (var effect : effects) {
+            if (effect.burst().fire()) continue;
             float progress = Mth.clamp((tick - effect.started() + partial) / effect.life(), 0, 1);
             Vec3 center = effect.burst().from().subtract(camera);
-            if (effect.burst().kind() == AngelBurst.FEATHER) {
+            if (effect.burst().effect() == AngelBurst.FEATHER) {
                 Vec3 end = effect.burst().to().subtract(camera);
                 feather(buffer, pose, center, end, progress);
                 continue;
             }
-            float dim = effect.burst().kind() == AngelBurst.DIM ? .22F : 1;
-            if (effect.burst().kind() != AngelBurst.FEATHER_IMPACT) {
+            float dim = effect.burst().effect() == AngelBurst.DIM ? .22F : 1;
+            if (effect.burst().effect() != AngelBurst.FEATHER_IMPACT) {
                 ring(buffer, pose, center.add(0, .09, 0), .4 + 3.4 * progress, (1 - progress) * dim);
             }
             for (int i = 0; i < 8; i++) {
@@ -75,7 +76,7 @@ final class AngelVisuals {
         }
         for (var player : client.level.players()) {
             var view = Angels.view(player);
-            if (!view.active() || player.isInvisible() || player.distanceToSqr(camera) > 64 * 64) continue;
+            if (!view.active() || Angels.inferno(player) || player.isInvisible() || player.distanceToSqr(camera) > 64 * 64) continue;
             Vec3 center = player.getPosition(partial).subtract(camera);
             float time = player.tickCount + partial;
             if (view.defending() && Angels.flying(player) && !view.fast()) {
@@ -94,6 +95,26 @@ final class AngelVisuals {
             }
         }
         client.renderBuffers().bufferSource().endBatch(AngelMesh.layer());
+        var fire = client.renderBuffers().bufferSource().getBuffer(PyraFire.layer());
+        for (var effect : effects) {
+            if (!effect.burst().fire()) continue;
+            float progress = Mth.clamp((tick - effect.started() + partial) / effect.life(), 0, 1);
+            PyraEffects.burst(fire, pose, effect.burst(), camera, progress);
+        }
+        PyraTrails.render(fire, pose, camera, tick, partial);
+        for (var player : client.level.players()) {
+            var view = Angels.view(player);
+            if (!view.active() || !Angels.inferno(player) || player.isInvisible()
+                    || player.distanceToSqr(camera) > 64 * 64) continue;
+            if (view.fast() && (view.defending() || view.spin() > tick)) {
+                var frame = AngelFlightPose.sample(player, partial).frame();
+                Vec3 center = player.getPosition(partial).subtract(camera)
+                    .add(frame.forward().scale(.82 * player.getScale()));
+                PyraEffects.spiral(fire, pose, frame, center, player.tickCount + partial,
+                    view.spin() > tick + partial, player.getScale());
+            }
+        }
+        client.renderBuffers().bufferSource().endBatch(PyraFire.layer());
     }
 
     private static void feather(VertexConsumer buffer, PoseStack.Pose pose, Vec3 start, Vec3 end,

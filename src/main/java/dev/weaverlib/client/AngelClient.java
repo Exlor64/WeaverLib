@@ -33,6 +33,7 @@ final class AngelClient {
     AngelClient(IEventBus bus) {
         bus.addListener(this::keys);
         bus.addListener(this::layers);
+        bus.addListener(PyraFire::shaders);
         NeoForge.EVENT_BUS.addListener(this::tick);
         NeoForge.EVENT_BUS.addListener(this::click);
         NeoForge.EVENT_BUS.addListener(this::hud);
@@ -69,6 +70,7 @@ final class AngelClient {
 
     private void tick(ClientTickEvent.Post e) {
         var client = Minecraft.getInstance();
+        PyraTrails.tick(client.level);
         var player = client.player;
         boolean ready = player != null && player.isAlive() && !player.isSpectator()
             && client.getConnection() != null && client.isWindowActive();
@@ -137,8 +139,11 @@ final class AngelClient {
             double growth = formation.started() < 0 ? 1 : AngelWingMotion.birthProgress(
                 player.level().getGameTime() + event.getPartialTick() - formation.started(), 0);
             var joints = AngelWingMotion.sample(player.tickCount * .12, 0, 0, 0, guardPose, strike, 0, side);
-            AngelWings.geometry(event.getMultiBufferSource().getBuffer(AngelMesh.layer()), poses,
-                AngelWingMotion.growing(joints, growth));
+            joints = AngelWingMotion.growing(joints, growth);
+            if (Angels.inferno(player)) {
+                PyraWings.geometry(event.getMultiBufferSource().getBuffer(PyraFire.layer()), poses, joints,
+                    player.level().getGameTime() + event.getPartialTick());
+            } else AngelWings.geometry(event.getMultiBufferSource().getBuffer(AngelMesh.layer()), poses, joints);
             poses.popPose();
         }
     }
@@ -150,7 +155,8 @@ final class AngelClient {
         if (view.rank() == 0) return;
         var graphics = e.getGuiGraphics();
         int capacity = (int) AngelEnergy.capacity(view.rank());
-        String mode = !view.active() ? "human" : view.fast() ? "fast" : "angel";
+        String mode = !view.active() ? "human" : Angels.inferno(client.player)
+            ? view.fast() ? "pyra_fast" : "pyra" : view.fast() ? "fast" : "angel";
         var text = Component.translatable("weaverlib.angel.hud." + mode,
             String.format(java.util.Locale.ROOT, "%.1f", view.energy() / 100.0), capacity);
         int width = Math.max(90, client.font.width(text));

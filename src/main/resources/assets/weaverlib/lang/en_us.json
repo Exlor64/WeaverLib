@@ -118,5 +118,7 @@
   "weaverlib.angel.entry_requirement": "You have %s completed advancements. Becoming an angel requires %s.",
   "weaverlib.angel.stage_set": "Testing stage set to %s. Use /weaverangel stage auto to restore natural progression.",
   "weaverlib.angel.stage_auto": "Angel stage now follows natural progression.",
-  "weaverlib.angel.stage_override": "An operator stage override is active. Natural advancement promotion is paused."
+  "weaverlib.angel.stage_override": "An operator stage override is active. Natural advancement promotion is paused.",
+  "weaverlib.angel.hud.pyra": "Pyra · %s / %s Grace",
+  "weaverlib.angel.hud.pyra_fast": "Pyra flight · %s / %s Grace"
 }

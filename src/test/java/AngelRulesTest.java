@@ -1,5 +1,6 @@
 import dev.weaverlib.angel.AngelEnergy;
 import dev.weaverlib.angel.AngelDash;
+import dev.weaverlib.angel.AngelForms;
 import dev.weaverlib.angel.AngelLevels;
 import dev.weaverlib.angel.AngelPayment;
 import java.util.List;
@@ -25,6 +26,15 @@ public final class AngelRulesTest {
         public void commit() { stored -= staged; commits++; }
     }
     public static void main(String[] args) {
+        // Every written combination is checked at every rank, including locked and unwritten inputs.
+        for (int rank = 0; rank <= 3; rank++) {
+            for (int sequence = -1; sequence <= 27; sequence++) {
+                int expected = rank >= 1 && sequence == 0 ? AngelForms.DIVINITY
+                    : rank >= 2 && sequence == 13 ? AngelForms.INFERNO : -1;
+                check(AngelForms.invocation(sequence, rank) == expected);
+            }
+        }
+        check(AngelForms.invocation(13, 4) == -1);
         check(AngelLevels.ENTRY == 25);
         check(AngelLevels.rankAt(74) == 1);
         check(AngelLevels.rankAt(75) == 2);

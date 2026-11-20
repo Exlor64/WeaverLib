@@ -9,6 +9,11 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 
 public record AngelBurst(int kind, Vec3 from, Vec3 to) implements CustomPacketPayload {
+    /** Packet flag: animated mesh effects only, with no native particles. */
+    public static final int FIRE = 64;
+    public boolean fire() { return (kind & FIRE) != 0; }
+    public int effect() { return kind & ~FIRE; }
+
     public static final int AWAKEN = 0;
     public static final int DIM = 1;
     public static final int IMPACT = 2;

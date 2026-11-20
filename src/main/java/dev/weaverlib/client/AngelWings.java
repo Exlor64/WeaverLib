@@ -68,9 +68,15 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
         var formation = Angels.formation(player);
         long tick = player.level().getGameTime();
         boolean emitBirth = m.lastBirthParticle != tick && tick % (formation.dim() ? 5 : 2) == 0;
+        boolean fire = Angels.inferno(player);
+        var buffer = buffers.getBuffer(fire ? PyraFire.layer() : AngelMesh.layer());
+        if (fire) {
+            double strength = formation.started() < 0 ? 1
+                : AngelWingMotion.smooth((time - formation.started()) / 18);
+            PyraAura.render(buffer, pose, getParentModel(), player, strength * (formation.dim() ? .65 : 1));
+        }
         pose.pushPose();
         getParentModel().body.translateAndRotate(pose);
-        var buffer = buffers.getBuffer(AngelMesh.layer());
         for (int pair = 0; pair < view.rank(); pair++) {
             for (int side = -1; side <= 1; side += 2) {
                 double strike = view.wing() == pair * 2 + (side > 0 ? 1 : 0) ? attack : -1;
@@ -81,8 +87,11 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
                 var joints = AngelWingMotion.growing(normal, growth);
                 pose.pushPose();
                 pose.scale(side, 1, 1);
-                geometry(buffer, pose, joints);
-                if (growth < 1) {
+                if (fire) {
+                    PyraWings.geometry(buffer, pose, joints, time + pair * 11);
+                    PyraTrails.sample(player, pose, joints, time, pair, side);
+                } else geometry(buffer, pose, joints);
+                if (!fire && growth < 1) {
                     birthGlow(buffer, pose, joints, growth, formation.dim());
                     if (emitBirth && growth > .02) birthParticles(pose, player, joints, growth);
                 }
