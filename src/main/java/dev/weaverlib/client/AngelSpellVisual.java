@@ -65,6 +65,7 @@ final class AngelSpellVisual {
 
     static void fire(VertexConsumer out, PoseStack.Pose pose, AngelBurst spell, Vec3 camera,
             double age, double life, double time, float partial) {
+        if(spell.effect()==AngelBurst.HOLY_BLAST){CelestialVisuals.blast(out,pose,spell,camera,age,life,time);return;}
         Vec3 center = origin(spell, camera, partial);
         if (center == null) return;
         double fade = AngelWingMotion.smooth(Math.min(age / 2, (life - age) / 5));

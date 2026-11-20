@@ -139,5 +139,19 @@
   "weaverlib.angel.hud.retribution_fast": "Nemesis · Fast flight · %s / %s Grace",
   "entity.weaverlib.angel_chain": "Binding Chains",
   "death.attack.weaverlib.chain": "%1$s was claimed by %2$s’s chains",
-  "weaverlib.angel.chain_health": "Chains: %s / 25"
+  "weaverlib.angel.chain_health": "Chains: %s / 25",
+  "weaverlib.angel.spell.oath": "Paladin's Oath",
+  "weaverlib.angel.spell.world_bind": "World Binding Chains",
+  "weaverlib.angel.spell.damocles": "Sword of Damocles",
+  "weaverlib.angel.spell.seal": "Holy Seal",
+  "weaverlib.angel.spell.sky": "Tear Open the Sky",
+  "weaverlib.angel.spell.retaliation": "Burning Retaliation",
+  "weaverlib.angel.spell.holy_blast": "Holy Blast",
+  "weaverlib.angel.spell.holy_grounds": "Holy Grounds",
+  "entity.weaverlib.celestial_anchor": "Celestial Binding",
+  "effect.weaverlib.damocles": "Sword of Damocles",
+  "effect.weaverlib.retaliation": "Retaliation",
+  "death.attack.weaverlib.damocles": "%1$s broke the covenant of Damocles",
+  "death.attack.weaverlib.celestial_fire": "%1$s was judged by %2$s’s burning light",
+  "death.attack.weaverlib.damocles.player": "%1$s broke the covenant of Damocles while fighting %2$s"
 }

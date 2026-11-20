@@ -42,11 +42,13 @@ final class AngelClient {
         NeoForge.EVENT_BUS.addListener(this::hands);
         NeoForge.EVENT_BUS.addListener(visuals::render);
         NeoForge.EVENT_BUS.addListener(ChainAttackVisual::render);
+        NeoForge.EVENT_BUS.addListener(RetaliationVisual::render);
         AngelBurst.receiver(visuals::receive);
     }
 
     private void renderers(EntityRenderersEvent.RegisterRenderers e) {
         e.registerEntityRenderer(dev.weaverlib.angel.RetributionCombat.BINDING.get(), ChainBindingRenderer::new);
+        e.registerEntityRenderer(dev.weaverlib.angel.CelestialSpells.ANCHOR.get(), CelestialRenderer::new);
     }
 
     private void keys(RegisterKeyMappingsEvent e) {
@@ -67,6 +69,9 @@ final class AngelClient {
         var player = client.player;
         if (client.screen != null || player == null || !player.isAlive() || !Angels.view(player).active()
                 || !player.getMainHandItem().isEmpty()) return;
+        if(e.isAttack() && client.hitResult instanceof net.minecraft.world.phys.EntityHitResult anchorHit
+                && anchorHit.getEntity() instanceof dev.weaverlib.angel.CelestialEntity anchor
+                && anchor.role()==dev.weaverlib.angel.CelestialEntity.CHAINS)return;
         // A bound angel must retain ordinary weapon/punch attacks against the restraint entity.
         if (e.isAttack() && client.hitResult instanceof net.minecraft.world.phys.EntityHitResult hit
                 && hit.getEntity() instanceof dev.weaverlib.angel.ChainBinding chain && chain.owner() != player) return;

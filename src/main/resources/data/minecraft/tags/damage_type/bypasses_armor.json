@@ -1,6 +1,7 @@
 {
   "replace": false,
   "values": [
-    "weaverlib:angel_chain"
+    "weaverlib:angel_chain",
+    "weaverlib:damocles"
   ]
 }

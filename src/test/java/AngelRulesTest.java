@@ -95,6 +95,7 @@ public final class AngelRulesTest {
         AngelGroundRulesTest.run();
         ShackleChainRulesTest.run();
         ChainCombatRulesTest.run();
+        CelestialRulesTest.run();
         PyraRulesTest.run();
         AngelSpellRulesTest.run();
         AngelFeatherRulesTest.run();

@@ -139,6 +139,7 @@ public final class Angels {
         ITEMS.register(bus);
         AngelProgress.register(bus);
         RetributionCombat.register(bus);
+        CelestialSpells.register(bus);
         NeoForge.EVENT_BUS.addListener(Angels::tick);
         NeoForge.EVENT_BUS.addListener(Angels::jumped);
         NeoForge.EVENT_BUS.addListener(Angels::login);
@@ -314,7 +315,7 @@ public final class Angels {
             }
             case AngelAction.FLIGHT -> {
                 if (session.active && now >= session.nextFlight && !player.onGround()
-                        && !player.isInWater() && !player.isPassenger() && RetributionCombat.binding(player) == null) {
+                        && !player.isInWater() && !player.isPassenger() && RetributionCombat.binding(player) == null && !CelestialSpells.pinned(player)) {
                     cancelPyra(player);
                     session.nextFlight = now + 8;
                     session.fast = !session.fast;
@@ -322,7 +323,7 @@ public final class Angels {
                     player.getAbilities().flying = !session.fast;
                     if (session.fast) {
                         player.startFallFlying();
-                        player.setDeltaMovement(player.getLookAngle().scale(.7));
+                        player.setDeltaMovement(player.getLookAngle().scale(.7 * CelestialSpells.flightScale(player)));
                     } else {
                         player.stopFallFlying();
                     }
@@ -396,6 +397,7 @@ public final class Angels {
     private static void revert(ServerPlayer player) {
         boolean fire = inferno(player);
         boolean mundane = retribution(player);
+        CelestialSpells.endForm(player);
         RetributionCombat.clear(player);
         cancelPyra(player);
         player.setData(INFERNO, false);
@@ -597,7 +599,7 @@ public final class Angels {
 
     private static void startDash(ServerPlayer player, long now) {
         var s = session(player);
-        if (!s.fast || !canUseWings(player) || RetributionCombat.binding(player) != null) return;
+        if (!s.fast || !canUseWings(player) || (RetributionCombat.binding(player) != null || CelestialSpells.pinned(player))) return;
         if (s.dash.active(now)) {
             s.dash = s.dash.renew(now);
             return;
@@ -609,7 +611,7 @@ public final class Angels {
         s.spinHits.clear();
         s.spinPosition = player.getBoundingBox().getCenter();
         player.setData(DASH_STARTED, now);
-        player.setDeltaMovement(player.getLookAngle().scale(1.8));
+        player.setDeltaMovement(player.getLookAngle().scale(1.8 * CelestialSpells.flightScale(player)));
         player.connection.send(new ClientboundSetEntityMotionPacket(player));
     }
 
@@ -636,15 +638,18 @@ public final class Angels {
             return;
         }
         long now = player.serverLevel().getGameTime();
-        if (s.fast && (player.onGround() || player.isInWater() || player.isPassenger() || RetributionCombat.binding(player) != null)) {
+        if (s.fast && (player.onGround() || player.isInWater() || player.isPassenger() || (RetributionCombat.binding(player) != null || CelestialSpells.pinned(player)))) {
             s.fast = false;
             stopDash(player, now);
             player.stopFallFlying();
             player.getAbilities().flying = false;
             player.onUpdateAbilities();
         }
-        boolean sunlight = sun(player);
-        if (sunlight) setEnergy(player, energy(player) + AngelEnergy.sunlightPerSecond(rank(player)) / 20);
+        float desiredFlight=(float)((inferno(player)?.05:SLOW_SPEED)*CelestialSpells.flightScale(player));
+        if(Math.abs(player.getAbilities().getFlyingSpeed()-desiredFlight)>.00001){player.getAbilities().setFlyingSpeed(desiredFlight);player.onUpdateAbilities();}
+        boolean tear = CelestialSpells.recharging(player);
+        boolean sunlight = sun(player) || tear;
+        if (sunlight) setEnergy(player, energy(player) + AngelEnergy.sunlightPerSecond(rank(player)) * (tear ? 2 : 1) / 20);
         if (!pay(player, upkeep(player, player.getAbilities().flying, s.fast))) {
             revert(player);
             return;
@@ -715,10 +720,12 @@ public final class Angels {
     }
 
     public static void accelerate(Player player, boolean spinning) {
+        if(RetributionCombat.binding(player)!=null || CelestialSpells.pinned(player))return;
+        double seal=CelestialSpells.flightScale(player);
         var direction = player.getLookAngle();
         var current = player.getDeltaMovement();
-        double target = spinning ? 2.15 : 1.10;
-        player.setDeltaMovement(current.scale(.90).add(direction.scale(target * .10)).add(0, .025, 0));
+        double target = (spinning ? 2.15 : 1.10) * seal;
+        player.setDeltaMovement(current.scale(.90).add(direction.scale(target * .10)).add(0, .025 * seal, 0));
         player.resetFallDistance();
     }
 

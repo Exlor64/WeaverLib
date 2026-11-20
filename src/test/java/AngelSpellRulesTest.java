@@ -10,17 +10,17 @@ public final class AngelSpellRulesTest {
     }
     private static boolean near(double a,double b) { return Math.abs(a-b)<1e-9; }
     public static void run() {
-        int[] codes={1,4,3,9,12,10}, costs={15,25,20,15,35,8};
+        int[] codes={1,4,3,9,12,10,2,24,18,5,19,17,15,7}, costs={15,25,20,15,35,8,40,100,75,40,200,60,150,60};
         for(int rank=0;rank<=4;rank++) {
             int known=0;
             for(int sequence=-1;sequence<=27;sequence++) {
                 int expected=-1;
-                for(int i=0;i<codes.length;i++) if(sequence==codes[i] && rank>=2 && rank<=3) expected=i;
+                for(int i=0;i<codes.length;i++) if(sequence==codes[i] && (i<6 ? rank>=2 && rank<=3 : rank==3)) expected=i;
                 check(AngelSpellRules.spell(sequence,rank)==expected);
                 if(sequence>=0 && sequence<27 &&
                         (AngelSpellRules.spell(sequence,rank)>=0 || AngelForms.invocation(sequence,rank)>=0)) known++;
             }
-            check(known==(rank==1?1:rank==2?8:rank==3?9:0));
+            check(known==(rank==1?1:rank==2?8:rank==3?17:0));
         }
         for(int i=0;i<costs.length;i++) check(AngelSpellRules.cost(i)==costs[i]);
         check(AngelSpellRules.smiteDamage(1)==10);

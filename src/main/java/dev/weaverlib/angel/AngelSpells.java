@@ -51,6 +51,7 @@ final class AngelSpells {
     private AngelSpells() {}
 
     static void cast(ServerPlayer player, State state, int spell, long now) {
+        if (spell >= AngelSpellRules.OATH) { CelestialSpells.cast(player, spell, now); return; }
         if (spell == AngelSpellRules.FORGE) { forge(player); return; }
         Vec3 target = spell == AngelSpellRules.SMITE ? aim(player) : null;
         if (spell == AngelSpellRules.SMITE && target == null) {

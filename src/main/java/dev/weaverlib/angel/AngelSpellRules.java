@@ -2,7 +2,7 @@ package dev.weaverlib.angel;
 
 /** Ordered wheel combinations and timing shared by the server and spell previews. */
 public final class AngelSpellRules {
-    public static final int HEALING = 0, SMITE = 1, REPEL = 2, CLEANSE = 3, CIRCLE = 4, FORGE = 5;
+    public static final int HEALING = 0, SMITE = 1, REPEL = 2, CLEANSE = 3, CIRCLE = 4, FORGE = 5, OATH = 6, WORLD_BIND = 7, DAMOCLES = 8, SEAL = 9, SKY = 10, RETALIATION = 11, HOLY_BLAST = 12, HOLY_GROUNDS = 13;
     public static final double HEAL_RADIUS = 3, CLEANSE_RADIUS = 3, WAVE_RADIUS = 6, SMITE_RANGE = 32;
     public static final int HEAL_TICKS = 80, CIRCLE_TICKS = 20, WAVE_TICKS = 12;
     public static final float HEAL_AMOUNT = 2, CIRCLE_DAMAGE = 8;
@@ -10,6 +10,14 @@ public final class AngelSpellRules {
 
     public static int spell(int sequence, int rank) {
         if (rank < 2 || rank > 3) return -1;
+        if (rank == 3) {
+            int advanced = switch (sequence) {
+                case 2 -> OATH; case 24 -> WORLD_BIND; case 18 -> DAMOCLES; case 5 -> SEAL;
+                case 19 -> SKY; case 17 -> RETALIATION; case 15 -> HOLY_BLAST; case 7 -> HOLY_GROUNDS;
+                default -> -1;
+            };
+            if (advanced >= 0) return advanced;
+        }
         return switch (sequence) {
             case 1 -> HEALING; // DDP
             case 4 -> SMITE;   // DPP
@@ -27,6 +35,12 @@ public final class AngelSpellRules {
             case REPEL -> 20;
             case CIRCLE -> 35;
             case FORGE -> 8;
+            case OATH, SEAL -> 40;
+            case WORLD_BIND -> 100;
+            case DAMOCLES -> 75;
+            case SKY -> 200;
+            case RETALIATION, HOLY_GROUNDS -> 60;
+            case HOLY_BLAST -> 150;
             default -> 0;
         };
     }
@@ -38,6 +52,9 @@ public final class AngelSpellRules {
             case CLEANSE -> "cleanse";
             case CIRCLE -> "circle";
             case FORGE -> "forge";
+            case OATH -> "oath"; case WORLD_BIND -> "world_bind"; case DAMOCLES -> "damocles";
+            case SEAL -> "seal"; case SKY -> "sky"; case RETALIATION -> "retaliation";
+            case HOLY_BLAST -> "holy_blast"; case HOLY_GROUNDS -> "holy_grounds";
             default -> "unknown";
         };
     }
