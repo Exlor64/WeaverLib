@@ -1,6 +1,7 @@
 {
   "replace": false,
   "values": [
-    "weaverlib:pyra_fire"
+    "weaverlib:pyra_fire",
+    "weaverlib:pyra_blast"
   ]
 }

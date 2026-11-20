@@ -3,6 +3,7 @@ package dev.weaverlib.client;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.weaverlib.angel.Angels;
+import dev.weaverlib.angel.PyraCombat;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -21,7 +22,7 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
     private ClientLevel world;
 
     private static final class Motion {
-        double lastTime, phase, flight, fast, effort = .7, guard, previousSpeed, vertical, dive, dash;
+        double lastTime, phase, flight, fast, effort = .7, guard, previousSpeed, vertical, dive, dash, gather;
         long lastBirthParticle = Long.MIN_VALUE;
         Motion(double time) { lastTime = time; }
     }
@@ -69,6 +70,10 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
         long tick = player.level().getGameTime();
         boolean emitBirth = m.lastBirthParticle != tick && tick % (formation.dim() ? 5 : 2) == 0;
         boolean fire = Angels.inferno(player);
+        var aerialCharge = Angels.charge(player);
+        if (fire && flying && !view.fast() && aerialCharge.active() && aerialCharge.fireball()) {
+            m.gather = Math.clamp(time - aerialCharge.started(), 0, 18);
+        } else m.gather = Math.max(0, m.gather - elapsed * 3);
         // Complete the feather pass before the fire pass. Both use the same pose and skeleton;
         // reacquiring a shared buffer mid-wing would flush it and break translucent ordering.
         for (int pass = 0; pass < (fire ? 2 : 1); pass++) {
@@ -85,6 +90,12 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
                     double strike = view.wing() == pair * 2 + (side > 0 ? 1 : 0) ? attack : -1;
                     var normal = AngelWingMotion.sample(m.phase, m.flight, m.fast, m.effort, m.guard, strike, pair, side);
                     normal = AngelWingMotion.aerial(normal, m.dive, m.dash, pair, side);
+                    var charge = Angels.charge(player);
+                    if (fire && flying && !view.fast()) {
+                        if (strike >= 0) normal = PyraWingMotion.slash(normal, strike);
+                        if (m.gather > 0) normal = PyraWingMotion.gather(normal,
+                            m.gather, pair, side, yaw, player.getViewXRot(partial));
+                    }
                     double growth = formation.started() < 0 ? 1
                         : AngelWingMotion.birthProgress(time - formation.started(), pair);
                     var joints = AngelWingMotion.growing(normal, growth);
@@ -95,10 +106,18 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
                     if (pass == 0) geometry(buffer, pose, joints, fire);
                     else {
                         PyraWings.geometry(buffer, pose, joints, time + pair * 11, pattern);
+                        if (charge.active() && charge.fireball() && PyraWingFire.inWorldPass()) {
+                            var tip = joints.surface(1, 0);
+                            double merge = AngelWingMotion.smooth((time - charge.started() - 10) / 8);
+                            double radius = PyraCombat.fireballOrb(charge.energy()) / Math.sqrt(view.rank() * 2);
+                            Vec3 at = new Vec3(tip.x(), tip.y(), tip.z());
+                            PyraBeamVisual.sphere(buffer, pose.last(), at, radius, time, PyraFire.WING, .7 * (1 - merge));
+                            PyraBeamVisual.sphere(buffer, pose.last(), at, radius * .55, time, PyraFire.CORE, .9 * (1 - merge));
+                        }
                         if (PyraWingFire.inWorldPass()) {
                             PyraWingFire.capture(player, pose, joints, pattern, pair, side, false);
                             PyraTrails.sample(player, pose, joints, time, pair, side);
-                            if (!flying && strike >= 0) PyraSlashes.sample(player, pose, joints, time, strike);
+                            if (strike >= 0) PyraSlashes.sample(player, pose, joints, time, strike);
                         }
                     }
                     if (!fire && growth < 1) {

@@ -126,14 +126,16 @@ final class AngelClient {
 
     private void hands(RenderHandEvent event) {
         var player = Minecraft.getInstance().player;
-        if (player == null || !Angels.view(player).active() || Angels.flying(player)
+        if (player == null || !Angels.view(player).active()
                 || !player.getMainHandItem().isEmpty()) return;
+        boolean aerialPyra = Angels.inferno(player) && player.getAbilities().flying && !Angels.view(player).fast();
+        if (Angels.flying(player) && !aerialPyra) return;
         float attack = (float) ((player.level().getGameTime() + event.getPartialTick()
             - Angels.view(player).swing()) / 12.0);
         float sweep = attack >= 0 && attack < 1 ? (float) Math.sin(attack * Math.PI) : 0;
         if (Angels.inferno(player) && Angels.charge(player).active()) {
             event.setCanceled(true);
-            if (event.getHand() == InteractionHand.MAIN_HAND) chargeHands(event, player);
+            if (!aerialPyra && event.getHand() == InteractionHand.MAIN_HAND) chargeHands(event, player);
             return;
         }
         if (guardPose <= 0 && sweep <= 0) return;
@@ -157,6 +159,7 @@ final class AngelClient {
                     player.getUUID().getLeastSignificantBits(), pair, side);
                 double growth = formation.started() < 0 ? 1 : AngelWingMotion.birthProgress(time - formation.started(), pair);
                 var joints = AngelWingMotion.sample(player.tickCount * .12, 0, 0, 0, guardPose, strike, pair, side);
+                if (aerialPyra && strike >= 0) joints = PyraWingMotion.slash(joints, strike);
                 joints = AngelWingMotion.growing(joints, growth);
                 if (pass == 0) AngelWings.geometry(buffer, poses, joints, fire);
                 else {

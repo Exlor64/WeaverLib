@@ -104,7 +104,7 @@ final class PyraBeamVisual {
         return frame.point(start,axial,r,angle);
     }
 
-    private static void sphere(VertexConsumer buffer,PoseStack.Pose pose,Vec3 center,double radius,
+    static void sphere(VertexConsumer buffer,PoseStack.Pose pose,Vec3 center,double radius,
             double time,int role,double alpha) {
         if (alpha<.001 || radius<.001) return;
         for (int latitude=0;latitude<12;latitude++) {

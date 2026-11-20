@@ -25,9 +25,14 @@ final class AngelVisuals {
             effects.clear();
             world = level;
         }
-        if (effects.size() >= 128) effects.removeFirst();
+        if (burst.effect() >= AngelBurst.PYRA_ARC) {
+            effects.removeIf(f -> f.burst().id() == burst.id() &&
+                (f.burst().effect() == AngelBurst.PYRA_ARC || f.burst().effect() == AngelBurst.PYRA_ORB));
+        }
+        if (effects.size() >= 256) effects.removeFirst();
         int life = burst.effect() == AngelBurst.FEATHER ? 3 : burst.effect() == AngelBurst.PYRA_BEAM
             ? 12 + (int)(10 * Math.log1p(PyraCharge.power(burst.power())) / Math.log(2)) : 22;
+        if (burst.effect() == AngelBurst.PYRA_ARC || burst.effect() == AngelBurst.PYRA_ORB) life = 3;
         effects.add(new Flash(burst, level.getGameTime(), life));
         if (!burst.fire() && (burst.effect() == AngelBurst.AWAKEN || burst.effect() == AngelBurst.IMPACT
                 || burst.effect() == AngelBurst.FEATHER_IMPACT || burst.effect() == AngelBurst.DIM)) {
@@ -106,6 +111,9 @@ final class AngelVisuals {
             if (effect.burst().effect() == AngelBurst.PYRA_BEAM) {
                 PyraBeamVisual.beam(fire, pose, effect.burst(), camera,
                     tick - effect.started() + partial, effect.life(), tick + partial);
+            } else if (effect.burst().effect() >= AngelBurst.PYRA_ARC) {
+                PyraAerialVisual.render(fire, pose, effect.burst(), camera, tick - effect.started() + partial,
+                    effect.life(), tick + partial);
             } else PyraEffects.burst(fire, pose, effect.burst(), camera, progress);
         }
         PyraWingFire.render(fire, pose, camera, partial);
@@ -116,7 +124,8 @@ final class AngelVisuals {
             if (!view.active() || !Angels.inferno(player) || player.isInvisible()
                     || player.distanceToSqr(camera) > 64 * 64) continue;
             PyraWisps.render(fire, pose, player, camera, partial);
-            if (!Angels.flying(player)) PyraBeamVisual.charge(fire, pose, player, camera, partial);
+            if (Angels.charge(player).fireball()) PyraAerialVisual.charge(fire, pose, player, camera, partial);
+            else if (!Angels.flying(player)) PyraBeamVisual.charge(fire, pose, player, camera, partial);
             if (view.fast() && (view.defending() || view.spin() > tick)) {
                 var frame = AngelFlightPose.sample(player, partial).frame();
                 Vec3 center = player.getPosition(partial).subtract(camera)
