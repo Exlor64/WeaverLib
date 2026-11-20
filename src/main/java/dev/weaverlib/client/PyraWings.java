@@ -4,54 +4,80 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.world.phys.Vec3;
 
-/** Wispy flame overlay on the articulated golden feathers, flowing shoulder-to-tip. */
+/** Flame roots and vanes sample the same individual feathers as the physical wing. */
 final class PyraWings {
     private PyraWings() {}
 
     static void geometry(VertexConsumer buffer, PoseStack pose, AngelWingMotion.Joints joints, double time) {
-        for (int shell = 0; shell < 2; shell++) {
-            for (int span = 0; span < 26; span++) {
-                double a = span / 26.0, b = (span + 1) / 26.0;
-                double born = AngelWingMotion.featherGrowth((a + b) * .5, joints.growth());
-                if (born < .001) continue;
-                for (int band = 0; band < 8; band++) {
-                    double v = band / 8.0, w = (band + 1) / 8.0;
-                    double alpha = born * (shell == 0 ? .55 : .18)
-                        * AngelWingMotion.smooth(a / .08) * AngelWingMotion.smooth((1 - b) / .08);
-                    PyraFire.wingQuad(buffer, pose.last(),
-                        point(joints, a, v * .83, time, shell), point(joints, b, v * .83, time, shell),
-                        point(joints, b, w * .83, time, shell), point(joints, a, w * .83, time, shell),
-                        a, v * .83, b, w * .83, alpha, alpha);
-                }
+        geometry(buffer, pose, joints, time, 0);
+    }
+
+    static void geometry(VertexConsumer buffer, PoseStack pose, AngelWingMotion.Joints joints,
+            double time, long pattern) {
+        long accents = AngelFeathers.goldMask(pattern);
+        double strike = Math.clamp(joints.strikeRoll() / Math.toRadians(80), 0, 1);
+        for (var feather : AngelFeathers.ALL) {
+            // Small coverts carry only occasional wisps; the feather layers stay readable.
+            if (feather.covert() && feather.index() % 3 != 0) continue;
+            double born = AngelFeathers.growth(joints, feather);
+            if (born <= .001) continue;
+            boolean gold = AngelFeathers.golden(accents, feather);
+            var n = AngelFeathers.normal(joints, feather, .58);
+            Vec3 normal = new Vec3(n.x(), n.y(), n.z());
+            double phase = feather.index() * 2.399 + (pattern & 1023) * .013;
+            double alpha = born * (feather.covert() ? .17 : .38);
+            int material = gold ? PyraFire.GILDED_WING : PyraFire.WING;
+
+            // A faint wash lies inside each vane's exact taper instead of bridging the gaps between feathers.
+            for (int band = 0; band < 5; band++) {
+                double a = .06 + band * .17, b = a + .17;
+                double wa = AngelFeathers.width(joints, feather, a) * .60;
+                double wb = AngelFeathers.width(joints, feather, b) * .60;
+                PyraFire.quad(buffer,pose.last(),material,
+                    surface(joints,feather,a,-wa,normal,.019),surface(joints,feather,a,wa,normal,.019),
+                    surface(joints,feather,b,wb,normal,.019),surface(joints,feather,b,-wb,normal,.019),
+                    0,a,1,b,alpha*.30,alpha*.30);
             }
-        }
-        // Long, narrow streams run from the roots along the articulated wing and curl beyond the outer tips.
-        for (int lane = 0; lane < 9; lane++) {
-            double trail = .045 + lane * .085;
-            for (int segment = 0; segment < 20; segment++) {
-                double a = segment / 20.0, b = (segment + 1) / 20.0;
-                double ua = .08 + a * 1.02, ub = .08 + b * 1.02;
-                double wa = .018 * Math.sin(a * Math.PI), wb = .018 * Math.sin(b * Math.PI);
-                double ca = trail + .035 * Math.sin(a * 8 - time * .14 + lane) * a;
-                double cb = trail + .035 * Math.sin(b * 8 - time * .14 + lane) * b;
-                double born = AngelWingMotion.featherGrowth((ua + ub) * .5, joints.growth());
-                if (born < .001) continue;
-                // quad's V follows the span, so both geometry and material flow shoulder-to-tip.
-                PyraFire.quad(buffer,pose.last(),PyraFire.TRAIL,
-                    point(joints,ua,ca-wa,time,0),point(joints,ua,ca+wa,time,0),
-                    point(joints,ub,cb+wb,time,0),point(joints,ub,cb-wb,time,0),
-                    0,a,1,b,born*.65,born*.65);
+            // The fire follows the quill, then peels into a small curl only near the real feather tip.
+            double extra = feather.covert() ? .02 : .12 + .10 * strike;
+            for (int segment = 0; segment < 10; segment++) {
+                double a = segment / 10.0, b = (segment + 1) / 10.0;
+                double ta = .12 + a * (1 + extra), tb = .12 + b * (1 + extra);
+                double wa = feather.width() * .24 * Math.sin(a * Math.PI) * born;
+                double wb = feather.width() * .24 * Math.sin(b * Math.PI) * born;
+                double ca = AngelFeathers.width(joints,feather,ta) * .35 * Math.sin(phase);
+                double cb = AngelFeathers.width(joints,feather,tb) * .35 * Math.sin(phase);
+                double liftA = lift(feather,ta,phase,time), liftB = lift(feather,tb,phase,time);
+                PyraFire.quad(buffer,pose.last(),gold ? PyraFire.GILDED_WING : PyraFire.TRAIL,
+                    surface(joints,feather,ta,ca-wa,normal,liftA),surface(joints,feather,ta,ca+wa,normal,liftA),
+                    surface(joints,feather,tb,cb+wb,normal,liftB),surface(joints,feather,tb,cb-wb,normal,liftB),
+                    0,a,1,b,alpha,alpha);
             }
         }
     }
 
-    static Vec3 point(AngelWingMotion.Joints joints, double u, double v, double time, int shell) {
-        double forming = AngelWingMotion.featherGrowth(u, joints.growth());
-        double wave = Math.sin(u * 29 - time * .16) * Math.sin(u * 13 + time * .11);
-        double strike = Math.clamp(joints.strikeRoll() / Math.toRadians(80), 0, 1);
-        double stretch = strike * AngelWingMotion.smooth((u - .45) / .55);
-        var p = joints.surface(u + wave * .009 * v * v + .055 * stretch,
-            v * (1 + .18 * strike) * forming * (.94 + .06 * Math.sin(u * 37 + time * .12)));
-        return new Vec3(p.x(), p.y(), p.z() + (shell == 0 ? -.012 : .018) * forming);
+    private static double lift(AngelFeathers.Feather feather,double along,double phase,double time) {
+        double peel = AngelWingMotion.smooth((along - .68) / .50);
+        return .024 + peel * (feather.covert() ? .016 : .065)
+            * (.65 + .35 * Math.sin(phase + along * 7 - time * .19));
+    }
+
+    private static Vec3 surface(AngelWingMotion.Joints joints,AngelFeathers.Feather feather,
+            double along,double across,Vec3 normal,double lift) {
+        var p = AngelFeathers.point(joints,feather,along,across);
+        return new Vec3(p.x(),p.y(),p.z()).add(normal.scale(lift));
+    }
+
+    static Vec3 featherEdge(AngelWingMotion.Joints joints,int index,double along,double across) {
+        var feather = AngelFeathers.ALL.get(index);
+        var n = AngelFeathers.normal(joints,feather,along);
+        return surface(joints,feather,along,AngelFeathers.width(joints,feather,along)*across,
+            new Vec3(n.x(),n.y(),n.z()),.020);
+    }
+
+    /** Melee slashes follow the physical leading edge, without the old sheet's independent wobble. */
+    static Vec3 point(AngelWingMotion.Joints joints,double span,double trail) {
+        var p = joints.surface(span,trail);
+        return new Vec3(p.x(),p.y(),p.z()-.012);
     }
 }

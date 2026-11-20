@@ -50,16 +50,6 @@ final class PyraFire {
         vertex(buffer, pose, role, d, u0, v1, alpha1);
     }
 
-    /** On wings, swap the UV axes: increasing V runs along the bones from shoulder to tip. */
-    static void wingQuad(VertexConsumer buffer, PoseStack.Pose pose,
-            Vec3 a, Vec3 b, Vec3 c, Vec3 d, double span0, double trail0, double span1, double trail1,
-            double alpha0, double alpha1) {
-        vertex(buffer, pose, GILDED_WING, a, trail0, span0, alpha0);
-        vertex(buffer, pose, GILDED_WING, b, trail0, span1, alpha0);
-        vertex(buffer, pose, GILDED_WING, c, trail1, span1, alpha1);
-        vertex(buffer, pose, GILDED_WING, d, trail1, span0, alpha1);
-    }
-
     private static void vertex(VertexConsumer buffer, PoseStack.Pose pose, int role, Vec3 p,
             double u, double v, double alpha) {
         buffer.addVertex(pose, (float) p.x, (float) p.y, (float) p.z)

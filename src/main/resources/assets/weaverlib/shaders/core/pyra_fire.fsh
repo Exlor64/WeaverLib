@@ -52,9 +52,8 @@ void main() {
     vec3 color = mix(vec3(0.55, 0.012, 0.025), vec3(1.0, 0.16, 0.025), smoothstep(0.24, 0.70, heat));
     color = mix(color, vec3(1.0, 0.67, 0.16), smoothstep(0.73, 0.94, heat) * 0.78);
     if (gildedWing) {
-        // Gold follows the leading edge; red-orange wisps remain visible between and beyond the feathers.
-        float leading = 1.0 - smoothstep(0.04, 0.38, uv.x);
-        float gold = leading * (0.42 + 0.28 * filament) + smoothstep(0.76, 0.94, heat) * 0.24;
+        // Only the scattered golden feathers use this material, including their attached fire.
+        float gold = 0.32 + 0.42 * filament + 0.12 * heat;
         color = mix(color, vec3(1.0, 0.76, 0.25), min(0.86, gold));
     }
     if (core) {

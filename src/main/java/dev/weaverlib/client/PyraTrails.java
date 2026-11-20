@@ -43,9 +43,9 @@ final class PyraTrails {
         Vec3 camera = client.gameRenderer.getMainCamera().getPosition();
         for (int lane = 0; lane < 3; lane++) {
             var history = TRAILS.computeIfAbsent(new Key(player.getUUID(), pair, side, lane), key -> new ArrayDeque<>());
-            double u = .35 + lane * .27;
-            Vec3 a = global(pose, PyraWings.point(joints, u - .055, .78, time, 0), camera);
-            Vec3 b = global(pose, PyraWings.point(joints, u + .055, .85, time, 0), camera);
+            int feather = 3 + lane * 4;
+            Vec3 a = global(pose, PyraWings.featherEdge(joints, feather, .86, -.8), camera);
+            Vec3 b = global(pose, PyraWings.featherEdge(joints, feather, .92, .8), camera);
             var previous = history.peekLast();
             if (previous != null && (tick < previous.tick || tick - previous.tick > 2
                     || a.distanceToSqr(previous.a) > 8 * 8)) history.clear();

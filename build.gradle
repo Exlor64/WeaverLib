@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'dev.weaverlib'
-version = '0.2.14'
+version = '0.2.15'
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
 repositories {

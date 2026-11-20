@@ -151,12 +151,15 @@ final class AngelClient {
                 poses.scale(side * .85F, -.85F, .85F);
                 var formation = Angels.formation(player);
                 double time = player.level().getGameTime() + event.getPartialTick();
-                double growth = formation.started() < 0 ? 1 : AngelWingMotion.birthProgress(time - formation.started(), 0);
-                var joints = AngelWingMotion.sample(player.tickCount * .12, 0, 0, 0, guardPose, strike, 0, side);
+                int pair = fire && sweep > 0 ? Angels.view(player).wing() / 2 : 0;
+                long pattern = AngelFeathers.seed(player.getUUID().getMostSignificantBits(),
+                    player.getUUID().getLeastSignificantBits(), pair, side);
+                double growth = formation.started() < 0 ? 1 : AngelWingMotion.birthProgress(time - formation.started(), pair);
+                var joints = AngelWingMotion.sample(player.tickCount * .12, 0, 0, 0, guardPose, strike, pair, side);
                 joints = AngelWingMotion.growing(joints, growth);
-                if (pass == 0) AngelWings.geometry(buffer, poses, joints, fire);
+                if (pass == 0) AngelWings.geometry(buffer, poses, joints, fire, pattern);
                 else {
-                    PyraWings.geometry(buffer, poses, joints, time);
+                    PyraWings.geometry(buffer, poses, joints, time, pattern);
                     if (strike >= 0) PyraSlashes.sample(player, poses, joints, time, strike);
                 }
                 poses.popPose();

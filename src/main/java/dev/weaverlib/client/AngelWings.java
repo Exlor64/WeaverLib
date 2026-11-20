@@ -90,9 +90,11 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
                     var joints = AngelWingMotion.growing(normal, growth);
                     pose.pushPose();
                     pose.scale(side, 1, 1);
-                    if (pass == 0) geometry(buffer, pose, joints, fire);
+                    long pattern = AngelFeathers.seed(player.getUUID().getMostSignificantBits(),
+                        player.getUUID().getLeastSignificantBits(), pair, side);
+                    if (pass == 0) geometry(buffer, pose, joints, fire, pattern);
                     else {
-                        PyraWings.geometry(buffer, pose, joints, time + pair * 11);
+                        PyraWings.geometry(buffer, pose, joints, time + pair * 11, pattern);
                         PyraTrails.sample(player, pose, joints, time, pair, side);
                         if (!flying && strike >= 0) PyraSlashes.sample(player, pose, joints, time, strike);
                     }
@@ -147,63 +149,50 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
     }
 
     static void geometry(VertexConsumer buffer, PoseStack pose, AngelWingMotion.Joints joints, boolean pyra) {
-        // Long primaries fan from the wrist; shorter overlapping rows fill the arm and cover the roots.
-        for (int i = 0; i < 12; i++) {
-            double u = .40 + i * .056;
-            double length = .93 - i * .026;
-            feather(buffer, pose.last(), joints, u, .04, .055, length, .055 + i * .004,
-                pyra ? i % 2 == 0 ? 0xFFE4A2 : 0xF3CF78 : i % 2 == 0 ? 0xFFF4C6 : 0xFFE3A2, pyra);
-        }
-        for (int i = 0; i < 11; i++) {
-            double u = .025 + i * .052;
-            feather(buffer, pose.last(), joints, u, .015, .048, .84 + u * .22, .025, pyra ? 0xEDC575 : 0xFFEAB0, pyra);
-        }
-        for (int row = 0; row < 2; row++) {
-            for (int i = 0; i < 13; i++) {
-                double u = .018 + i * .075;
-                feather(buffer, pose.last(), joints, u, -.035 + row * .11, .045,
-                    .38 + row * .10, .012, pyra ? row == 0 ? 0xFFF0BF : 0xDDB05E
-                        : row == 0 ? 0xFFF9DE : 0xF9D58D, pyra);
-            }
+        geometry(buffer, pose, joints, pyra, 0);
+    }
+
+    static void geometry(VertexConsumer buffer, PoseStack pose, AngelWingMotion.Joints joints,
+            boolean pyra, long pattern) {
+        long accents = pyra ? AngelFeathers.goldMask(pattern) : 0;
+        for (var feather : AngelFeathers.ALL) {
+            boolean gold = pyra && AngelFeathers.golden(accents, feather);
+            feather(buffer, pose.last(), joints, feather,
+                pyra ? AngelFeathers.pyraColor(feather, gold) : feather.normalColor(), pyra, gold);
         }
     }
 
-    private static Vec3 point(AngelWingMotion.Joints joints, double u, double v, double ridge) {
-        var p = joints.surface(u, v);
+    private static Vec3 featherPoint(AngelWingMotion.Joints joints, AngelFeathers.Feather feather,
+            double along, double offset, double ridge) {
+        var p = AngelFeathers.point(joints, feather, along, offset);
         return new Vec3(p.x(), p.y(), p.z() - ridge);
     }
 
     private static void feather(VertexConsumer buffer, PoseStack.Pose pose, AngelWingMotion.Joints joints,
-            double u, double start, double width, double length, double lean, int color, boolean pyra) {
-        double forming = AngelWingMotion.featherGrowth(u, joints.growth());
+            AngelFeathers.Feather feather, int color, boolean pyra, boolean gold) {
+        double forming = AngelFeathers.growth(joints, feather);
         if (forming <= .001) return;
-        length *= forming;
-        width *= .20 + .80 * forming;
-        lean *= forming;
         float alpha = (float) Math.min(1, forming * 2);
-        // Five tapered sections make each feather bend with the wing and give it a curved luminous edge.
+        int quill = !pyra ? 0xFFFBEA : gold ? 0xFFF0B8 : 0xF38A48;
+        int fringe = !pyra || gold ? 0xFFB63E : 0xE76A32;
         for (int band = 0; band < 5; band++) {
             double a = band / 5.0, b = (band + 1) / 5.0;
-            double centerA = u + lean * a * a, centerB = u + lean * b * b;
-            double wA = width * Math.sin(Math.PI * Math.pow(a, .65));
-            double wB = width * Math.sin(Math.PI * Math.pow(b, .65));
-            double vA = start + length * a, vB = start + length * b;
-            Vec3 leftA = point(joints, centerA - wA, vA, .012);
-            Vec3 rightA = point(joints, centerA + wA, vA, .012);
-            Vec3 leftB = point(joints, centerB - wB, vB, .012);
-            Vec3 rightB = point(joints, centerB + wB, vB, .012);
+            double wA = AngelFeathers.width(joints, feather, a), wB = AngelFeathers.width(joints, feather, b);
+            Vec3 leftA = featherPoint(joints, feather, a, -wA, .012);
+            Vec3 rightA = featherPoint(joints, feather, a, wA, .012);
+            Vec3 leftB = featherPoint(joints, feather, b, -wB, .012);
+            Vec3 rightB = featherPoint(joints, feather, b, wB, .012);
             float body = (pyra ? .97F : .92F) * alpha, tip = (pyra ? .91F : .84F) * alpha;
             AngelMesh.quad(buffer, pose, color, body, body, tip, tip, leftA, rightA, rightB, leftB);
-            AngelMesh.quad(buffer, pose, pyra ? 0xFFF1C4 : 0xFFFBEA, .72F * alpha, .72F * alpha, .48F * alpha, .48F * alpha,
-                point(joints, centerA - .004, vA, .025), point(joints, centerA + .004, vA, .025),
-                point(joints, centerB + .003, vB, .025), point(joints, centerB - .003, vB, .025));
-            // A narrow, fading gold fringe avoids the old solid diamond-shaped glow cards.
-            AngelMesh.quad(buffer, pose, 0xFFB63E, .20F * alpha, 0, 0, .16F * alpha,
-                leftA, point(joints, centerA - wA - .016, vA, .006),
-                point(joints, centerB - wB - .012, vB, .006), leftB);
-            AngelMesh.quad(buffer, pose, 0xFFB63E, .20F * alpha, 0, 0, .16F * alpha,
-                rightA, point(joints, centerA + wA + .016, vA, .006),
-                point(joints, centerB + wB + .012, vB, .006), rightB);
+            AngelMesh.quad(buffer, pose, quill, .72F * alpha, .72F * alpha, .48F * alpha, .48F * alpha,
+                featherPoint(joints, feather, a, -.004, .025), featherPoint(joints, feather, a, .004, .025),
+                featherPoint(joints, feather, b, .003, .025), featherPoint(joints, feather, b, -.003, .025));
+            AngelMesh.quad(buffer, pose, fringe, .20F * alpha, 0, 0, .16F * alpha,
+                leftA, featherPoint(joints, feather, a, -wA - .016, .006),
+                featherPoint(joints, feather, b, -wB - .012, .006), leftB);
+            AngelMesh.quad(buffer, pose, fringe, .20F * alpha, 0, 0, .16F * alpha,
+                rightA, featherPoint(joints, feather, a, wA + .016, .006),
+                featherPoint(joints, feather, b, wB + .012, .006), rightB);
         }
     }
 }

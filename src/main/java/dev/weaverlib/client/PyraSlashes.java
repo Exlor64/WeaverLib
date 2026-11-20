@@ -37,8 +37,8 @@ final class PyraSlashes {
         Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
         long now = player.level().getGameTime();
         if (!edges.isEmpty() && edges.peekLast().tick == now) edges.removeLast();
-        Vec3 a = world(pose, PyraWings.point(joints, .63, .03, time, 0), camera);
-        Vec3 b = world(pose, PyraWings.point(joints, 1.03, .11, time, 0), camera);
+        Vec3 a = world(pose, PyraWings.point(joints, .63, .03), camera);
+        Vec3 b = world(pose, PyraWings.point(joints, 1.03, .11), camera);
         if (!edges.isEmpty() && a.distanceToSqr(edges.peekLast().inner) > 8 * 8) edges.clear();
         edges.addLast(new Edge(now,a,b));
         while (edges.size() > 12) edges.removeFirst();
