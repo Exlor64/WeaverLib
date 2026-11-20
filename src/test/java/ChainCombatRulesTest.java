@@ -21,7 +21,7 @@ public final class ChainCombatRulesTest {
         }
         check(pulses == 9 && !ChainCombatRules.pulse(0));
         check(ChainCombatRules.expired(200));
-        check(ChainCombatRules.TIGHTEN_PER_TICK * 20 == 4);
+        check(ChainCombatRules.TIGHTEN_PER_TICK * 20 == 12);
         int previous = 0;
         for (int distance = 0; distance <= 640; distance++) {
             int travel = ChainCombatRules.travelTicks(distance / 20.0);

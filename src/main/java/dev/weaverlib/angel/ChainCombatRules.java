@@ -4,7 +4,7 @@ package dev.weaverlib.angel;
 public final class ChainCombatRules {
     public static final float HEALTH = 25, MELEE_DAMAGE = 4, TIGHTEN_DAMAGE = 4;
     public static final double MELEE_RANGE = 4, TARGET_RANGE = 16;
-    public static final double MELEE_COST = 2, GRAPPLE_COST = 6, BIND_COST = 8, TIGHTEN_PER_TICK = .2;
+    public static final double MELEE_COST = 10, GRAPPLE_COST = 30, BIND_COST = 40, TIGHTEN_PER_TICK = .6;
     public static final int MAX_BINDS = 4, LIFETIME = 200, ATTACK_COOLDOWN = 12, HIT_DELAY = 4;
     private ChainCombatRules() {}
     public static float damaged(float health, float damage) {
