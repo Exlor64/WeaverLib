@@ -33,8 +33,8 @@ public final class PyraCombat {
     public static double fireballRadius(double invested) { return 2.5 + 3.5 * Math.sqrt(fireballPower(invested)); }
     public static double fireballOrb(double invested) { return .45 + .60 * Math.cbrt(fireballPower(invested)); }
 
-    /** The standing cost includes the persistent flame aura; slow/fast flight total 4/7 Grace per second. */
+    /** The standing cost includes the persistent flame aura; slow/fast flight total 8/14 Grace per second. */
     public static double upkeep(boolean flying, boolean fast) {
-        return (2 + (fast ? 5 : flying ? 2 : 0)) / 20.0;
+        return (fast ? 14 : flying ? 8 : 2) / 20.0;
     }
 }

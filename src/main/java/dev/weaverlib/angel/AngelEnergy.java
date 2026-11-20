@@ -31,6 +31,6 @@ public final class AngelEnergy {
     }
 
     public static double upkeep(boolean flying, boolean fast) {
-        return (.25 + (fast ? 2 : flying ? .5 : 0)) / 20;
+        return (fast ? 4.5 : flying ? 1.5 : .25) / 20;
     }
 }

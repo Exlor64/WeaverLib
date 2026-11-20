@@ -80,7 +80,7 @@ public final class PyraRulesTest {
         check(PyraCombat.fireballDamage(1000)>PyraCombat.fireballDamage(350));
         check(PyraCombat.fireballRadius(1000)>PyraCombat.fireballRadius(350));
         check(PyraCombat.fireballOrb(1000)>PyraCombat.fireballOrb(350));
-        check(equal(PyraCombat.upkeep(true,true)*20,7));
+        check(equal(PyraCombat.upkeep(true,true)*20,14));
         check(equal(PyraWingMotion.slashScale(.3),1.5));
         check(equal(PyraWingMotion.slashScale(1),1));
         for (int pair=0;pair<3;pair++) {
