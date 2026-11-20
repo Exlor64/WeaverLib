@@ -87,10 +87,7 @@ final class AngelVisuals {
             }
             if (view.fast() && (view.defending() || view.spin() > tick)) {
                 double remaining = view.spin() - tick - partial;
-                long started = Angels.dashStarted(player);
-                double roll = remaining > 0 && started >= 0
-                    ? AngelFlightFrame.channelRoll(tick + partial - started) : 0;
-                var frame = AngelFlightFrame.of(player.getViewYRot(partial), player.getViewXRot(partial), roll);
+                var frame = AngelFlightPose.sample(player, partial).frame();
                 // The renderer lays the body forward from its feet; its center is along that axis.
                 Vec3 body = center.add(frame.forward().scale(.82 * player.getScale()));
                 spiral(buffer, pose, frame, body, time, remaining > 0, player.getScale());

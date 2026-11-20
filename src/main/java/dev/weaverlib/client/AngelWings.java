@@ -55,7 +55,7 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
         m.effort += (effort - m.effort) * blend;
         m.vertical += (player.getDeltaMovement().y - m.vertical) * blend;
         m.flight += ((flying ? 1 : 0) - m.flight) * blend;
-        m.fast += ((view.fast() ? 1 : 0) - m.fast) * blend;
+        m.fast = AngelFlightPose.sample(player, partial).blend();
         double diving = view.fast() ? AngelWingMotion.diveAmount(player.getViewXRot(partial), player.getDeltaMovement().y) : 0;
         m.dive += (diving - m.dive) * blend;
         m.dash += ((view.fast() && view.spin() > time ? 1 : 0) - m.dash) * (1 - Math.exp(-elapsed / 2.5));

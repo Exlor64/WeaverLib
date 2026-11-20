@@ -1,4 +1,5 @@
 import dev.weaverlib.client.AngelFlightMath;
+import dev.weaverlib.client.AngelFlightTransition;
 import dev.weaverlib.client.AngelFlightMath.Vector;
 import dev.weaverlib.client.AngelWingMotion;
 
@@ -178,6 +179,27 @@ public final class AngelVisualRulesTest {
             "Dash release must unwind by the short path instead of snapping through a full turn");
         require(Math.abs(AngelFlightMath.settleRoll(1.5, 4)) < .25,
             "Dash roll should settle smoothly after release");
+        var entering = AngelFlightTransition.steady(false, 0).toward(true, 0);
+        require(entering.value(0) == 0 && entering.value(8) == 1,
+            "Fast flight must ease from upright to prone over eight ticks");
+        require(near(entering.value(4), .5), "The body must pass through an intermediate tilt");
+        require(entering.toward(true, 2) == entering, "Repeated state updates cannot restart the transition");
+        var reversing = entering.toward(false, 4);
+        require(near(reversing.value(4), entering.value(4)), "Reversing mid-transition must not snap");
+        require(reversing.value(12) == 0, "Returning to creative flight must finish upright");
+        require(AngelFlightTransition.steady(true, 100).value(100) == 1,
+            "An already flying player entering view should not replay the transition");
+        double previousBlend = -1;
+        for (int tick = 0; tick <= 8; tick++) {
+            double blend = entering.value(tick);
+            require(blend >= previousBlend && blend >= 0 && blend <= 1, "Flight tilt must progress monotonically");
+            previousBlend = blend;
+            double tilt = -90 * blend;
+            var frame = AngelFlightMath.of(35, -90 - tilt, .3);
+            require(matches(modelDirection(new Vector(0, 1, 0), 35, -90 - tilt, .3), frame.forward()),
+                "Transition effects must follow the same interpolated body axis");
+            frames++;
+        }
         require(AngelFlightMath.roll(-1) == 0, "An expired attack must not keep rolling");
         System.out.println("Passed angel visual geometry checks across " + frames + " animation and flight frames.");
     }
