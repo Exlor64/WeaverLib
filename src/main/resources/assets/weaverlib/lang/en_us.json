@@ -120,5 +120,8 @@
   "weaverlib.angel.stage_auto": "Angel stage now follows natural progression.",
   "weaverlib.angel.stage_override": "An operator stage override is active. Natural advancement promotion is paused.",
   "weaverlib.angel.hud.pyra": "Pyra · %s / %s Grace",
-  "weaverlib.angel.hud.pyra_fast": "Pyra flight · %s / %s Grace"
+  "weaverlib.angel.hud.pyra_fast": "Pyra flight · %s / %s Grace",
+  "weaverlib.angel.pyra_charge": "%s Grace invested · Release to fire",
+  "death.attack.weaverlib.pyra": "%1$s was consumed by %2$s's inferno",
+  "death.attack.weaverlib.pyra.item": "%1$s was consumed by %2$s's inferno using %3$s"
 }

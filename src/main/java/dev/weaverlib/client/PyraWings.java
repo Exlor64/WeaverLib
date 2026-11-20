@@ -18,29 +18,29 @@ final class PyraWings {
                     double v = band / 8.0, w = (band + 1) / 8.0;
                     double alpha = born * (shell == 0 ? .88 : .32)
                         * AngelWingMotion.smooth(a / .08) * AngelWingMotion.smooth((1 - b) / .08);
-                    PyraFire.quad(buffer, pose.last(), PyraFire.WING,
+                    PyraFire.wingQuad(buffer, pose.last(),
                         point(joints, a, v * .83, time, shell), point(joints, b, v * .83, time, shell),
                         point(joints, b, w * .83, time, shell), point(joints, a, w * .83, time, shell),
-                        a * 3, v * .83, b * 3, w * .83, alpha, alpha);
+                        a, v * .83, b, w * .83, alpha, alpha);
                 }
             }
         }
-        // The flame tips have genuine curved silhouettes, not square cards or a recolored feather texture.
-        for (int i = 0; i < 19; i++) {
-            double u = .045 + i * .049, seed = i * 2.399;
-            double born = AngelWingMotion.featherGrowth(u, joints.growth());
-            if (born < .001) continue;
-            for (int band = 0; band < 7; band++) {
-                double a = band / 7.0, b = (band + 1) / 7.0;
-                double ca = u + Math.sin(seed + time * .085 + a * 3) * .024 * a;
-                double cb = u + Math.sin(seed + time * .085 + b * 3) * .024 * b;
-                double wa = .035 * (1 - a) * (1 - a * .4), wb = .035 * (1 - b) * (1 - b * .4);
-                double length = .37 + .14 * Math.sin(seed + time * .13);
-                double va = .57 + a * length, vb = .57 + b * length;
-                PyraFire.quad(buffer, pose.last(), PyraFire.WING,
-                    point(joints, ca - wa, va, time, 0), point(joints, ca + wa, va, time, 0),
-                    point(joints, cb + wb, vb, time, 0), point(joints, cb - wb, vb, time, 0),
-                    0, a * .85, 1, b * .85, born * .8 * (1 - a), born * .8 * (1 - b));
+        // Long, narrow streams run from the roots along the articulated wing and curl beyond the outer tips.
+        for (int lane = 0; lane < 9; lane++) {
+            double trail = .045 + lane * .085;
+            for (int segment = 0; segment < 20; segment++) {
+                double a = segment / 20.0, b = (segment + 1) / 20.0;
+                double ua = .08 + a * 1.02, ub = .08 + b * 1.02;
+                double wa = .018 * Math.sin(a * Math.PI), wb = .018 * Math.sin(b * Math.PI);
+                double ca = trail + .035 * Math.sin(a * 8 - time * .14 + lane) * a;
+                double cb = trail + .035 * Math.sin(b * 8 - time * .14 + lane) * b;
+                double born = AngelWingMotion.featherGrowth((ua + ub) * .5, joints.growth());
+                if (born < .001) continue;
+                // quad's V follows the span, so both geometry and material flow shoulder-to-tip.
+                PyraFire.quad(buffer,pose.last(),PyraFire.TRAIL,
+                    point(joints,ua,ca-wa,time,0),point(joints,ua,ca+wa,time,0),
+                    point(joints,ub,cb+wb,time,0),point(joints,ub,cb-wb,time,0),
+                    0,a,1,b,born*.65,born*.65);
             }
         }
     }
@@ -48,8 +48,10 @@ final class PyraWings {
     static Vec3 point(AngelWingMotion.Joints joints, double u, double v, double time, int shell) {
         double forming = AngelWingMotion.featherGrowth(u, joints.growth());
         double wave = Math.sin(u * 29 - time * .16) * Math.sin(u * 13 + time * .11);
-        var p = joints.surface(u + wave * .009 * v * v,
-            v * forming * (.94 + .06 * Math.sin(u * 37 + time * .12)));
+        double strike = Math.clamp(joints.strikeRoll() / Math.toRadians(80), 0, 1);
+        double stretch = strike * AngelWingMotion.smooth((u - .45) / .55);
+        var p = joints.surface(u + wave * .009 * v * v + .055 * stretch,
+            v * (1 + .18 * strike) * forming * (.94 + .06 * Math.sin(u * 37 + time * .12)));
         return new Vec3(p.x(), p.y(), p.z() + (shell == 0 ? -.012 : .018) * forming);
     }
 }

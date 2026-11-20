@@ -14,6 +14,7 @@ public record AngelAction(int action, int sequence) implements CustomPacketPaylo
     public static final int FLIGHT = 4;
     public static final int DASH = 5;
     public static final int STOP_DASH = 6;
+    public static final int CANCEL = 7;
     public static final Type<AngelAction> TYPE =
         new Type<>(ResourceLocation.fromNamespaceAndPath(WeaverLib.ID, "angel_action"));
     public static final StreamCodec<ByteBuf, AngelAction> CODEC = StreamCodec.of(

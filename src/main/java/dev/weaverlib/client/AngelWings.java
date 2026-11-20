@@ -59,7 +59,7 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
         double diving = view.fast() ? AngelWingMotion.diveAmount(player.getViewXRot(partial), player.getDeltaMovement().y) : 0;
         m.dive += (diving - m.dive) * blend;
         m.dash += ((view.fast() && view.spin() > time ? 1 : 0) - m.dash) * (1 - Math.exp(-elapsed / 2.5));
-        m.guard += ((view.defending() && !flying ? 1 : 0) - m.guard) * (1 - Math.exp(-elapsed / 2.2));
+        m.guard += ((view.defending() && !flying && !Angels.inferno(player) ? 1 : 0) - m.guard) * (1 - Math.exp(-elapsed / 2.2));
         // Integrating phase prevents animation jumps when speed or flight mode changes.
         double hoverRate = AngelWingMotion.hoverRate(m.vertical);
         double flightRate = hoverRate + m.fast * (.29 + m.effort * .13 - hoverRate);
@@ -90,6 +90,7 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
                 if (fire) {
                     PyraWings.geometry(buffer, pose, joints, time + pair * 11);
                     PyraTrails.sample(player, pose, joints, time, pair, side);
+                    if (!flying && strike >= 0) PyraSlashes.sample(player, pose, joints, time, strike);
                 } else geometry(buffer, pose, joints);
                 if (!fire && growth < 1) {
                     birthGlow(buffer, pose, joints, growth, formation.dim());

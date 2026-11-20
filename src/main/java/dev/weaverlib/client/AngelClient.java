@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import dev.weaverlib.angel.AngelAction;
 import dev.weaverlib.angel.AngelBurst;
 import dev.weaverlib.angel.AngelEnergy;
+import dev.weaverlib.angel.PyraCharge;
 import dev.weaverlib.angel.Angels;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -71,6 +72,7 @@ final class AngelClient {
     private void tick(ClientTickEvent.Post e) {
         var client = Minecraft.getInstance();
         PyraTrails.tick(client.level);
+        PyraSlashes.tick(client.level);
         var player = client.player;
         boolean ready = player != null && player.isAlive() && !player.isSpectator()
             && client.getConnection() != null && client.isWindowActive();
@@ -84,7 +86,7 @@ final class AngelClient {
         if (!ready) {
             if (client.getConnection() != null) {
                 if (dashing) send(AngelAction.STOP_DASH);
-                if (defending) send(AngelAction.RELEASE);
+                if (defending) send(AngelAction.CANCEL);
             }
             dashing = false;
             defending = false;
@@ -96,14 +98,18 @@ final class AngelClient {
         boolean guard = active && client.screen == null && player.getMainHandItem().isEmpty()
             && client.options.keyUse.isDown();
         if (guard && (!defending || player.tickCount % 4 == 0)) send(AngelAction.DEFEND);
-        if (!guard && defending) send(AngelAction.RELEASE);
+        if (!guard && defending) {
+            boolean released = active && client.screen == null && player.getMainHandItem().isEmpty()
+                && !player.isUsingItem() && !client.options.keyUse.isDown();
+            send(released ? AngelAction.RELEASE : AngelAction.CANCEL);
+        }
         defending = guard;
         boolean dash = active && Angels.view(player).fast() && client.screen == null
             && player.getMainHandItem().isEmpty() && !player.isUsingItem() && client.options.keyAttack.isDown();
         if (dash && (!dashing || player.tickCount % 4 == 0)) send(AngelAction.DASH);
         if (!dash && dashing) send(AngelAction.STOP_DASH);
         dashing = dash;
-        float desiredGuard = Angels.view(player).defending() && !Angels.flying(player) ? 1 : 0;
+        float desiredGuard = Angels.view(player).defending() && !Angels.flying(player) && !Angels.inferno(player) ? 1 : 0;
         guardPose += Math.clamp(desiredGuard - guardPose, -.25F, .25F);
         boolean sprint = client.options.keySprint.isDown();
         if (active && client.screen == null && sprint && !wasSprint && !player.onGround()) {
@@ -124,6 +130,11 @@ final class AngelClient {
         float attack = (float) ((player.level().getGameTime() + event.getPartialTick()
             - Angels.view(player).swing()) / 12.0);
         float sweep = attack >= 0 && attack < 1 ? (float) Math.sin(attack * Math.PI) : 0;
+        if (Angels.inferno(player) && Angels.charge(player).active()) {
+            event.setCanceled(true);
+            if (event.getHand() == InteractionHand.MAIN_HAND) chargeHands(event, player);
+            return;
+        }
         if (guardPose <= 0 && sweep <= 0) return;
         event.setCanceled(true);
         if (event.getHand() != InteractionHand.MAIN_HAND) return;
@@ -141,10 +152,29 @@ final class AngelClient {
             var joints = AngelWingMotion.sample(player.tickCount * .12, 0, 0, 0, guardPose, strike, 0, side);
             joints = AngelWingMotion.growing(joints, growth);
             if (Angels.inferno(player)) {
-                PyraWings.geometry(event.getMultiBufferSource().getBuffer(PyraFire.layer()), poses, joints,
-                    player.level().getGameTime() + event.getPartialTick());
+                double time = player.level().getGameTime() + event.getPartialTick();
+                PyraWings.geometry(event.getMultiBufferSource().getBuffer(PyraFire.layer()), poses, joints, time);
+                if (strike >= 0) PyraSlashes.sample(player, poses, joints, time, strike);
             } else AngelWings.geometry(event.getMultiBufferSource().getBuffer(AngelMesh.layer()), poses, joints);
             poses.popPose();
+        }
+    }
+
+    private static void chargeHands(RenderHandEvent event, net.minecraft.client.player.AbstractClientPlayer player) {
+        var client = Minecraft.getInstance();
+        if (!(client.getEntityRenderDispatcher().getRenderer(player) instanceof PlayerRenderer renderer)) return;
+        var pose = event.getPoseStack();
+        double radius = PyraCharge.orbRadius(Angels.charge(player).energy());
+        double strain = radius / (.3 + radius);
+        for (int side = -1; side <= 1; side += 2) {
+            pose.pushPose();
+            pose.translate(side * (.24 + strain * .12), -.46 - strain * .08, -.38);
+            pose.mulPose(com.mojang.math.Axis.XP.rotationDegrees(-80));
+            pose.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(side * -18));
+            pose.scale(.85F,.85F,.85F);
+            if (side < 0) renderer.renderLeftHand(pose,event.getMultiBufferSource(),event.getPackedLight(),player);
+            else renderer.renderRightHand(pose,event.getMultiBufferSource(),event.getPackedLight(),player);
+            pose.popPose();
         }
     }
 
@@ -165,5 +195,16 @@ final class AngelClient {
         graphics.drawString(client.font, text, x, 8, 0xFFFFE4A5);
         graphics.fill(x, 19, x + width, 21, 0xFF645C55);
         graphics.fill(x, 19, x + width * view.energy() / (capacity * 100), 21, 0xFFFFCF71);
+        var charge = Angels.charge(client.player);
+        if (Angels.inferno(client.player) && charge.active()) {
+            var label = Component.translatable("weaverlib.angel.pyra_charge",
+                String.format(java.util.Locale.ROOT, "%.1f", charge.energy()));
+            int chargeWidth = Math.max(width, client.font.width(label));
+            int cx = graphics.guiWidth() - chargeWidth - 9;
+            graphics.fill(cx - 4, 26, cx + chargeWidth + 4, 46, 0xC4310C0C);
+            graphics.drawString(client.font,label,cx,29,0xFFFFAA65);
+            graphics.fill(cx,41,cx + chargeWidth,43,0xFF5D2323);
+            graphics.fill(cx,41,cx + (int)(chargeWidth * (1 - 1 / (1 + charge.energy() / 100))),43,0xFFF86024);
+        }
     }
 }

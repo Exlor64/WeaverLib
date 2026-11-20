@@ -10,6 +10,11 @@ import java.util.UUID;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageType;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -23,6 +28,7 @@ import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.common.NeoForgeMod;
@@ -95,6 +101,19 @@ public final class Angels {
         ATTACHMENTS.register("angel_inferno", () -> AttachmentType.builder(() -> false)
             .sync(ByteBufCodecs.BOOL).build());
 
+    private static final ResourceKey<DamageType> PYRA_FIRE = ResourceKey.create(Registries.DAMAGE_TYPE,
+        ResourceLocation.fromNamespaceAndPath(WeaverLib.ID, "pyra_fire"));
+
+    public record Charge(long started, double invested) {
+        public static final Charge NONE = new Charge(-1, 0);
+        public boolean active() { return started >= 0 && invested >= PyraCharge.START_COST; }
+        public double energy() { return invested; }
+    }
+    private static final StreamCodec<io.netty.buffer.ByteBuf, Charge> CHARGE_CODEC = StreamCodec.composite(
+        ByteBufCodecs.VAR_LONG, Charge::started, ByteBufCodecs.DOUBLE, Charge::invested, Charge::new);
+    private static final DeferredHolder<AttachmentType<?>, AttachmentType<Charge>> CHARGE =
+        ATTACHMENTS.register("pyra_charge", () -> AttachmentType.builder(() -> Charge.NONE).sync(CHARGE_CODEC).build());
+
     private Angels() {}
 
     public static void register(IEventBus bus, net.neoforged.fml.ModContainer container) {
@@ -120,6 +139,15 @@ public final class Angels {
 
     public static boolean inferno(Player player) {
         return player.getExistingData(INFERNO).orElse(false);
+    }
+
+    public static Charge charge(Player player) {
+        return player.getExistingData(CHARGE).orElse(Charge.NONE);
+    }
+
+    public static Vec3 pyraHands(Player player, float partial) {
+        return player.getEyePosition(partial).add(player.getViewVector(partial).scale(.95 * player.getScale()))
+            .add(0, -.32 * player.getScale(), 0);
     }
 
     public static Formation formation(Player player) {
@@ -211,15 +239,27 @@ public final class Angels {
             case AngelAction.DASH -> startDash(player, now);
             case AngelAction.STOP_DASH -> stopDash(player, now);
             case AngelAction.DEFEND -> {
-                if (canUseWings(player)) {
+                if (pyraGrounded(player)) {
+                    session.defendUntil = 0;
+                    holdPyra(player, now);
+                } else if (canUseWings(player)) {
+                    cancelPyra(player);
                     if (session.defendUntil < now) session.defendStarted = now;
                     session.defendUntil = now + 8;
                 }
             }
-            case AngelAction.RELEASE -> session.defendUntil = 0;
+            case AngelAction.RELEASE -> {
+                session.defendUntil = 0;
+                releasePyra(player, now);
+            }
+            case AngelAction.CANCEL -> {
+                session.defendUntil = 0;
+                cancelPyra(player);
+            }
             case AngelAction.FLIGHT -> {
                 if (session.active && now >= session.nextFlight && !player.onGround()
                         && !player.isInWater() && !player.isPassenger()) {
+                    cancelPyra(player);
                     session.nextFlight = now + 8;
                     session.fast = !session.fast;
                     if (!session.fast) stopDash(player, now);
@@ -253,6 +293,9 @@ public final class Angels {
             return;
         }
         var s = session(player);
+        cancelPyra(player);
+        s.defendUntil = 0;
+        s.meleeAt = 0;
         player.setData(INFERNO, fire);
         player.setData(FORMATION, new Formation(player.serverLevel().getGameTime(), !sunlight));
         if (s.active) {
@@ -283,6 +326,7 @@ public final class Angels {
 
     private static void revert(ServerPlayer player) {
         boolean fire = inferno(player);
+        cancelPyra(player);
         player.setData(INFERNO, false);
         player.setData(FORMATION, Formation.NONE);
         player.setData(DASH_STARTED, -1L);
@@ -329,9 +373,91 @@ public final class Angels {
         return AngelFuel.pay(player, cost, true);
     }
 
+    private static boolean pyraGrounded(ServerPlayer player) {
+        return inferno(player) && canUseWings(player) && !flying(player);
+    }
+
+    private static void holdPyra(ServerPlayer player, long now) {
+        var s = session(player);
+        if (s.charge.held(now)) s.charge = s.charge.renew(now);
+        else {
+            cancelPyra(player);
+            if (now < s.nextAttack || !pay(player, PyraCharge.START_COST)) return;
+            s.charge = PyraCharge.begin(now);
+            player.serverLevel().playSound(null, player, SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, .6F, .55F);
+        }
+        syncCharge(player);
+    }
+
+    private static void syncCharge(ServerPlayer player) {
+        var state = session(player).charge;
+        Charge next = state.started() < 0 ? Charge.NONE : new Charge(state.started(), state.invested());
+        if (!next.equals(charge(player))) player.setData(CHARGE, next);
+    }
+
+    private static void cancelPyra(ServerPlayer player) {
+        var s = player.getExistingData(SESSION).orElse(null);
+        if (s != null) s.charge = PyraCharge.NONE;
+        if (charge(player).active()) player.setData(CHARGE, Charge.NONE);
+    }
+
+    private static void releasePyra(ServerPlayer player, long now) {
+        var s = session(player);
+        var paid = s.charge;
+        boolean ready = pyraGrounded(player) && paid.held(now);
+        cancelPyra(player);
+        if (!ready) return;
+        s.nextAttack = Math.max(s.nextAttack, now + 16);
+        double energy = paid.invested(), radius = PyraCharge.radius(energy);
+        Vec3 direction = player.getLookAngle();
+        Vec3 eye = player.getEyePosition();
+        Vec3 desired = pyraHands(player, 1);
+        var muzzle = player.serverLevel().clip(new ClipContext(eye, desired, ClipContext.Block.COLLIDER,
+            ClipContext.Fluid.NONE, player));
+        // The muzzle cannot be placed through a wall when the player is standing against it.
+        Vec3 start = muzzle.getLocation().subtract(direction.scale(.03));
+        double range = muzzle.getType() == HitResult.Type.BLOCK ? .03 : PyraCharge.range(energy);
+        for (double distance = 0; distance <= range; distance += 1) {
+            Vec3 at = start.add(direction.scale(distance));
+            if (!player.serverLevel().getChunkSource().hasChunk((int)Math.floor(at.x) >> 4, (int)Math.floor(at.z) >> 4)) {
+                range = Math.max(0, distance - 1);
+                break;
+            }
+        }
+        Vec3 end = player.serverLevel().clip(new ClipContext(start, start.add(direction.scale(range)),
+            ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player)).getLocation();
+        var damage = new DamageSource(player.serverLevel().registryAccess().registryOrThrow(Registries.DAMAGE_TYPE)
+            .getHolderOrThrow(PYRA_FIRE), player);
+        for (LivingEntity target : player.serverLevel().getEntitiesOfClass(LivingEntity.class,
+                new AABB(start, end).inflate(radius), living -> canHit(player, living))) {
+            var expanded = target.getBoundingBox().inflate(radius);
+            var intersect = expanded.clip(start, end);
+            if (!expanded.contains(start) && intersect.isEmpty()) continue;
+            Vec3 closest = target.getBoundingBox().getCenter();
+            var obstruction = player.serverLevel().clip(new ClipContext(start, closest,
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+            if (obstruction.getType() != HitResult.Type.MISS) continue;
+            if (target.hurt(damage, (float)PyraCharge.damage(energy))) {
+                target.igniteForSeconds((float)(4 + 6 * Math.sqrt(PyraCharge.power(energy))));
+                target.knockback(.35 + .65 * PyraCharge.power(energy), -direction.x, -direction.z);
+            }
+            if (!s.active) break;
+        }
+        var effect = new AngelBurst(AngelBurst.PYRA_BEAM | AngelBurst.FIRE, start, end, (float)energy);
+        Vec3 segment = end.subtract(start);
+        for (ServerPlayer observer : player.serverLevel().players()) {
+            double along = segment.lengthSqr() < .001 ? 0
+                : Math.clamp(observer.getEyePosition().subtract(start).dot(segment) / segment.lengthSqr(), 0, 1);
+            if (observer.getEyePosition().distanceToSqr(start.add(segment.scale(along))) <= (96 + radius) * (96 + radius))
+                PacketDistributor.sendToPlayer(observer, effect);
+        }
+        player.serverLevel().playSound(null, player, SoundEvents.BLAZE_SHOOT, SoundSource.PLAYERS,
+            1.2F, (float)(1.15 - PyraCharge.power(energy) / (1 + PyraCharge.power(energy)) * .45));
+    }
+
     private static void attack(ServerPlayer player, long now) {
         var s = session(player);
-        if (!canUseWings(player) || now < s.nextAttack || s.defendUntil >= now) return;
+        if (!canUseWings(player) || now < s.nextAttack || s.defendUntil >= now || s.charge.started() >= 0) return;
         if (s.fast) {
             startDash(player, now);
         } else if (player.getAbilities().flying) {
@@ -400,13 +526,27 @@ public final class Angels {
             player.getAbilities().flying = false;
             player.onUpdateAbilities();
         }
+        if (inferno(player) && now % 10 == 0) {
+            for (Mob mob : player.serverLevel().getEntitiesOfClass(Mob.class, player.getBoundingBox().inflate(3),
+                    mob -> mob.isAlive() && mob.distanceToSqr(player) <= 9)) {
+                mob.igniteForSeconds(3);
+            }
+        }
         boolean sunlight = sun(player);
         if (sunlight) setEnergy(player, energy(player) + AngelEnergy.sunlightPerSecond(rank(player)) / 20);
         if (!pay(player, AngelEnergy.upkeep(player.getAbilities().flying, s.fast))) {
             revert(player);
             return;
         }
-        if (!canUseWings(player)) s.defendUntil = 0;
+        if (!canUseWings(player) || inferno(player) && !flying(player)) s.defendUntil = 0;
+        if (s.charge.started() >= 0) {
+            if (!pyraGrounded(player) || !s.charge.held(now)) cancelPyra(player);
+            else {
+                double cost = s.charge.nextCost(now);
+                if (cost > 0 && pay(player, cost)) s.charge = s.charge.paid(now);
+                syncCharge(player);
+            }
+        }
         if (s.dash.started() >= 0) {
             if (!s.fast || !canUseWings(player) || !s.dash.active(now)
                     || !pay(player, AngelDash.COST_PER_TICK)) stopDash(player, now);
@@ -448,7 +588,9 @@ public final class Angels {
             Vec3 delta = target.getBoundingBox().getCenter().subtract(origin);
             if (delta.lengthSqr() <= MELEE_RANGE * MELEE_RANGE && forward.dot(delta.normalize()) >= .2
                     && player.hasLineOfSight(target)) {
-                target.hurt(player.damageSources().playerAttack(player), 5);
+                boolean fire = inferno(player);
+                boolean hit = target.hurt(player.damageSources().playerAttack(player), fire ? PyraCharge.MELEE_DAMAGE : 5);
+                if (fire && hit) target.igniteForSeconds(5);
                 target.knockback(.5, -delta.x, -delta.z);
             }
         }
@@ -519,7 +661,7 @@ public final class Angels {
 
     private static void shield(LivingIncomingDamageEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player) || !canDefend(player)
-                || flying(player) || event.getSource().is(DamageTypeTags.BYPASSES_SHIELD)) return;
+                || flying(player) || inferno(player) || event.getSource().is(DamageTypeTags.BYPASSES_SHIELD)) return;
         var s = session(player);
         long now = player.serverLevel().getGameTime();
         if (now - s.defendStarted < 5 || now < s.shieldDisabledUntil) return;
@@ -703,6 +845,7 @@ public final class Angels {
         long meleeAt;
         int wing;
         AngelDash dash = AngelDash.NONE;
+        PyraCharge charge = PyraCharge.NONE;
         Vec3 spinPosition;
         final Set<UUID> spinHits = new HashSet<>();
         final List<Feather> feathers = new ArrayList<>();

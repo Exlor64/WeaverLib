@@ -14,7 +14,7 @@ final class PyraAura {
 
     static void render(VertexConsumer buffer, PoseStack pose, PlayerModel<AbstractClientPlayer> model,
             AbstractClientPlayer player, double strength) {
-        double alpha = .27 * strength;
+        double alpha = .10 * strength;
         boolean slim = player.getSkin().model() == net.minecraft.client.resources.PlayerSkin.Model.SLIM;
         part(buffer, pose, model.head, -4, -8, -4, 4, 0, 4,
             pad(player, EquipmentSlot.HEAD), alpha);

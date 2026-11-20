@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.weaverlib.angel.AngelBurst;
 import dev.weaverlib.angel.Angels;
+import dev.weaverlib.angel.PyraCharge;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
@@ -25,7 +26,9 @@ final class AngelVisuals {
             world = level;
         }
         if (effects.size() >= 128) effects.removeFirst();
-        effects.add(new Flash(burst, level.getGameTime(), burst.effect() == AngelBurst.FEATHER ? 3 : 22));
+        int life = burst.effect() == AngelBurst.FEATHER ? 3 : burst.effect() == AngelBurst.PYRA_BEAM
+            ? 12 + (int)(10 * Math.log1p(PyraCharge.power(burst.power())) / Math.log(2)) : 22;
+        effects.add(new Flash(burst, level.getGameTime(), life));
         if (!burst.fire() && (burst.effect() == AngelBurst.AWAKEN || burst.effect() == AngelBurst.IMPACT
                 || burst.effect() == AngelBurst.FEATHER_IMPACT || burst.effect() == AngelBurst.DIM)) {
             int count = burst.effect() == AngelBurst.DIM ? 5 : 28;
@@ -99,13 +102,19 @@ final class AngelVisuals {
         for (var effect : effects) {
             if (!effect.burst().fire()) continue;
             float progress = Mth.clamp((tick - effect.started() + partial) / effect.life(), 0, 1);
-            PyraEffects.burst(fire, pose, effect.burst(), camera, progress);
+            if (effect.burst().effect() == AngelBurst.PYRA_BEAM) {
+                PyraBeamVisual.beam(fire, pose, effect.burst(), camera,
+                    tick - effect.started() + partial, effect.life(), tick + partial);
+            } else PyraEffects.burst(fire, pose, effect.burst(), camera, progress);
         }
         PyraTrails.render(fire, pose, camera, tick, partial);
+        PyraSlashes.render(fire, pose, camera, tick, partial);
         for (var player : client.level.players()) {
             var view = Angels.view(player);
             if (!view.active() || !Angels.inferno(player) || player.isInvisible()
                     || player.distanceToSqr(camera) > 64 * 64) continue;
+            PyraWisps.render(fire, pose, player, camera, partial);
+            if (!Angels.flying(player)) PyraBeamVisual.charge(fire, pose, player, camera, partial);
             if (view.fast() && (view.defending() || view.spin() > tick)) {
                 var frame = AngelFlightPose.sample(player, partial).frame();
                 Vec3 center = player.getPosition(partial).subtract(camera)
