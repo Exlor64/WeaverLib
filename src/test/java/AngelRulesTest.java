@@ -50,7 +50,7 @@ public final class AngelRulesTest {
         check(!AngelLevels.dayReady(12, true, 12));
         check(AngelLevels.dayReady(13, true, 12));
         check(!AngelLevels.dayReady(11, true, 12));
-        check(equal(AngelEnergy.capacity(3), 350));
+        check(equal(AngelEnergy.capacity(3), 525));
 
         // A partial reserve plus several cells can pay, consuming only the shortfall.
         var a = new Battery(125); var b = new Battery(300);

@@ -936,7 +936,7 @@ public final class Angels {
                 sync(p);
                 return 1;
             }))
-            .then(Commands.literal("energy").requires(source -> source.hasPermission(2)).then(Commands.argument("amount", DoubleArgumentType.doubleArg(0, 350))
+            .then(Commands.literal("energy").requires(source -> source.hasPermission(2)).then(Commands.argument("amount", DoubleArgumentType.doubleArg(0, AngelEnergy.capacity(3)))
                 .executes(ctx -> {
                     var p = ctx.getSource().getPlayerOrException();
                     setEnergy(p, DoubleArgumentType.getDouble(ctx, "amount"));

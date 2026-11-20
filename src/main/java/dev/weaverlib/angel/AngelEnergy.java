@@ -6,18 +6,18 @@ public final class AngelEnergy {
 
     public static double capacity(int rank) {
         return switch (rank) {
-            case 1 -> 100;
-            case 2 -> 200;
-            case 3 -> 350;
+            case 1 -> 150;
+            case 2 -> 300;
+            case 3 -> 525;
             default -> 0;
         };
     }
 
     public static double sunlightPerSecond(int rank) {
         return switch (rank) {
-            case 1 -> 2;
-            case 2 -> 4;
-            case 3 -> 6;
+            case 1 -> 1.4;
+            case 2 -> 2.8;
+            case 3 -> 4.2;
             default -> 0;
         };
     }
