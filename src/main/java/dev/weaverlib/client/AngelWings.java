@@ -173,8 +173,8 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
         double forming = AngelFeathers.growth(joints, feather);
         if (forming <= .001) return;
         float alpha = (float) Math.min(1, forming * 2);
-        int quill = !pyra ? 0xFFFBEA : gold ? 0xFFF0B8 : 0xF38A48;
-        int fringe = !pyra || gold ? 0xFFB63E : 0xE76A32;
+        int quill = !pyra ? 0xFFFBEA : gold ? 0xFFF0B8 : 0xEC643F;
+        int fringe = !pyra || gold ? 0xFFB63E : 0xDE4A2C;
         for (int band = 0; band < 5; band++) {
             double a = band / 5.0, b = (band + 1) / 5.0;
             double wA = AngelFeathers.width(joints, feather, a), wB = AngelFeathers.width(joints, feather, b);

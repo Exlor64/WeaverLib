@@ -45,10 +45,10 @@ public final class AngelFeathers {
     public static int pyraColor(Feather feather, boolean gold) {
         if (gold) return feather.index() % 2 == 0 ? 0xFFDE8C : 0xEBC064;
         return switch (feather.index() % 4) {
-            case 0 -> 0xD65B2E;
-            case 1 -> 0xC44B29;
-            case 2 -> 0xE16B35;
-            default -> feather.covert() ? 0xB84127 : 0xCF542B;
+            case 0 -> 0xD03E31;
+            case 1 -> 0xC0342F;
+            case 2 -> 0xDA4E37;
+            default -> feather.covert() ? 0xB22E2E : 0xC83A2F;
         };
     }
 
