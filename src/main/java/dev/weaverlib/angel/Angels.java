@@ -310,8 +310,11 @@ public final class Angels {
         s.arcAt = 0;
         s.collisionUntil = -1;
         player.setData(INFERNO, fire);
+        float hoverSpeed = fire ? .05F : (float) SLOW_SPEED;
         player.setData(FORMATION, new Formation(player.serverLevel().getGameTime(), !sunlight));
         if (s.active) {
+            player.getAbilities().setFlyingSpeed(hoverSpeed);
+            player.onUpdateAbilities();
             // Changing aspect preserves flight grants, velocity and the current flight mode.
             burst(player, sunlight ? AngelBurst.AWAKEN : AngelBurst.DIM, player.position(), player.position());
             player.serverLevel().playSound(null, player, SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS,
@@ -329,7 +332,7 @@ public final class Angels {
         var flight = player.getAttribute(NeoForgeMod.CREATIVE_FLIGHT);
         flight.removeModifier(FLIGHT_ATTRIBUTE);
         flight.addTransientModifier(new AttributeModifier(FLIGHT_ATTRIBUTE, 1, AttributeModifier.Operation.ADD_VALUE));
-        player.getAbilities().setFlyingSpeed((float) SLOW_SPEED);
+        player.getAbilities().setFlyingSpeed(hoverSpeed);
         player.onUpdateAbilities();
         burst(player, sunlight ? AngelBurst.AWAKEN : AngelBurst.DIM, player.position(), player.position());
         player.serverLevel().playSound(null, player, SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS,
