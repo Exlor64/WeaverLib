@@ -134,5 +134,7 @@
   "weaverlib.angel.spell.cleanse": "Cleansing Flames",
   "weaverlib.angel.spell.circle": "Circle of Flame",
   "weaverlib.angel.spell.forge": "Divine Forge",
-  "weaverlib.angel.spell_preview_item": "%s · %s Grace/item"
+  "weaverlib.angel.spell_preview_item": "%s · %s Grace/item",
+  "weaverlib.angel.hud.retribution": "Nemesis · %s / %s Grace",
+  "weaverlib.angel.hud.retribution_fast": "Nemesis · Fast flight · %s / %s Grace"
 }

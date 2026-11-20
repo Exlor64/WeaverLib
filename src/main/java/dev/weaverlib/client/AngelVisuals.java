@@ -99,7 +99,7 @@ final class AngelVisuals {
         }
         for (var player : client.level.players()) {
             var view = Angels.view(player);
-            if (!view.active() || Angels.inferno(player) || player.isInvisible() || player.distanceToSqr(camera) > 64 * 64) continue;
+            if (!view.active() || Angels.inferno(player) || Angels.retribution(player) || player.isInvisible() || player.distanceToSqr(camera) > 64 * 64) continue;
             Vec3 center = player.getPosition(partial).subtract(camera);
             float time = player.tickCount + partial;
             if (view.defending() && Angels.flying(player) && !view.fast()) {

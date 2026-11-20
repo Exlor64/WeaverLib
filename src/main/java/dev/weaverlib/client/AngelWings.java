@@ -92,14 +92,15 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
         long tick = player.level().getGameTime();
         boolean emitBirth = m.lastBirthParticle != tick && tick % (formation.dim() ? 5 : 2) == 0;
         boolean fire = Angels.inferno(player);
+        boolean mundane = Angels.retribution(player);
         var aerialCharge = Angels.charge(player);
         if (fire && flying && !view.fast() && aerialCharge.active() && aerialCharge.fireball()) {
             m.gather = Math.clamp(time - aerialCharge.started(), 0, 18);
         } else m.gather = Math.max(0, m.gather - elapsed * 3);
         // Draw all depth-writing feathers before their color-only fringe and fire overlays.
         // Each pass uses the same skeleton, without reacquiring or flushing a buffer mid-wing.
-        for (int pass = 0; pass < (fire ? 3 : 2); pass++) {
-            var buffer = buffers.getBuffer(pass == 0 ? AngelMesh.wingLayer()
+        for (int pass = 0; pass < (mundane ? 1 : fire ? 3 : 2); pass++) {
+            var buffer = buffers.getBuffer(mundane ? RetributionWings.layer() : pass == 0 ? AngelMesh.wingLayer()
                 : pass == 1 ? AngelMesh.layer() : PyraFire.layer());
             if (pass == 2) {
                 double strength = formation.started() < 0 ? 1
@@ -127,7 +128,8 @@ final class AngelWings extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
                     pose.scale(side, 1, 1);
                     long pattern = AngelFeathers.seed(player.getUUID().getMostSignificantBits(),
                         player.getUUID().getLeastSignificantBits(), pair, side);
-                    if (pass == 0) geometry(buffer, pose, joints, fire);
+                    if (mundane) RetributionWings.geometry(buffer, pose.last(), joints, light);
+                    else if (pass == 0) geometry(buffer, pose, joints, fire);
                     else if (pass == 1) glowGeometry(buffer, pose, joints, fire);
                     else {
                         PyraWings.geometry(buffer, pose, joints, time + pair * 11, pattern);

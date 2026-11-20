@@ -49,7 +49,10 @@ final class AngelClient {
 
     private void layers(EntityRenderersEvent.AddLayers e) {
         for (var skin : e.getSkins()) {
-            if (e.getSkin(skin) instanceof PlayerRenderer renderer) renderer.addLayer(new AngelWings(renderer));
+            if (e.getSkin(skin) instanceof PlayerRenderer renderer) {
+                renderer.addLayer(new AngelWings(renderer));
+                renderer.addLayer(new AngelShackles(renderer));
+            }
         }
     }
 
@@ -143,8 +146,9 @@ final class AngelClient {
         if (event.getHand() != InteractionHand.MAIN_HAND) return;
         var poses = event.getPoseStack();
         boolean fire = Angels.inferno(player);
-        for (int pass = 0; pass < (fire ? 3 : 2); pass++) {
-            var buffer = event.getMultiBufferSource().getBuffer(pass == 0 ? AngelMesh.wingLayer()
+        boolean mundane = Angels.retribution(player);
+        for (int pass = 0; pass < (mundane ? 1 : fire ? 3 : 2); pass++) {
+            var buffer = event.getMultiBufferSource().getBuffer(mundane ? RetributionWings.layer() : pass == 0 ? AngelMesh.wingLayer()
                 : pass == 1 ? AngelMesh.layer() : PyraFire.layer());
             for (int side = -1; side <= 1; side += 2) {
                 poses.pushPose();
@@ -162,7 +166,8 @@ final class AngelClient {
                 var joints = AngelWingMotion.sample(player.tickCount * .12, 0, 0, 0, guardPose, strike, pair, side);
                 if (aerialPyra && strike >= 0) joints = PyraWingMotion.slash(joints, strike);
                 joints = AngelWingMotion.growing(joints, growth);
-                if (pass == 0) AngelWings.geometry(buffer, poses, joints, fire);
+                if (mundane) RetributionWings.geometry(buffer, poses.last(), joints, event.getPackedLight());
+                else if (pass == 0) AngelWings.geometry(buffer, poses, joints, fire);
                 else if (pass == 1) AngelWings.glowGeometry(buffer, poses, joints, fire);
                 else {
                     PyraWings.geometry(buffer, poses, joints, time, pattern);
@@ -199,7 +204,8 @@ final class AngelClient {
         if (view.rank() == 0) return;
         var graphics = e.getGuiGraphics();
         int capacity = (int) AngelEnergy.capacity(view.rank());
-        String mode = !view.active() ? "human" : Angels.inferno(client.player)
+        String mode = !view.active() ? "human" : Angels.retribution(client.player)
+            ? view.fast() ? "retribution_fast" : "retribution" : Angels.inferno(client.player)
             ? view.fast() ? "pyra_fast" : "pyra" : view.fast() ? "fast" : "angel";
         var text = Component.translatable("weaverlib.angel.hud." + mode,
             String.format(java.util.Locale.ROOT, "%.1f", view.energy() / 100.0), capacity);

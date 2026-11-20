@@ -30,7 +30,8 @@ public final class AngelRulesTest {
         for (int rank = 0; rank <= 3; rank++) {
             for (int sequence = -1; sequence <= 27; sequence++) {
                 int expected = rank >= 1 && sequence == 0 ? AngelForms.DIVINITY
-                    : rank >= 2 && sequence == 13 ? AngelForms.INFERNO : -1;
+                    : rank >= 2 && sequence == 13 ? AngelForms.INFERNO
+                    : rank >= 3 && sequence == 26 ? AngelForms.RETRIBUTION : -1;
                 check(AngelForms.invocation(sequence, rank) == expected);
             }
         }
@@ -92,6 +93,7 @@ public final class AngelRulesTest {
         System.out.println("Passed " + checks + " angel progression and payment checks.");
         AngelVisualRulesTest.run();
         AngelGroundRulesTest.run();
+        ShackleChainRulesTest.run();
         PyraRulesTest.run();
         AngelSpellRulesTest.run();
         AngelFeatherRulesTest.run();

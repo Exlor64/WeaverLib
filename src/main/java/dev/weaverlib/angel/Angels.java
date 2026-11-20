@@ -110,6 +110,10 @@ public final class Angels {
         ATTACHMENTS.register("angel_inferno", () -> AttachmentType.builder(() -> false)
             .sync(ByteBufCodecs.BOOL).build());
 
+    private static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> RETRIBUTION =
+        ATTACHMENTS.register("angel_retribution", () -> AttachmentType.builder(() -> false)
+            .sync(ByteBufCodecs.BOOL).build());
+
     private static final ResourceKey<DamageType> PYRA_FIRE = ResourceKey.create(Registries.DAMAGE_TYPE,
         ResourceLocation.fromNamespaceAndPath(WeaverLib.ID, "pyra_fire"));
 
@@ -154,6 +158,15 @@ public final class Angels {
 
     public static boolean inferno(Player player) {
         return player.getExistingData(INFERNO).orElse(false);
+    }
+
+    public static boolean retribution(Player player) {
+        return player.getExistingData(RETRIBUTION).orElse(false);
+    }
+
+    public static int form(Player player) {
+        return retribution(player) ? AngelForms.RETRIBUTION
+            : inferno(player) ? AngelForms.INFERNO : AngelForms.DIVINITY;
     }
 
     public static Charge charge(Player player) {
@@ -262,9 +275,8 @@ public final class Angels {
                     sync(player);
                     return;
                 }
-                boolean fire = form == AngelForms.INFERNO;
-                if (session.active && inferno(player) == fire) revert(player);
-                else transform(player, fire);
+                if (session.active && form(player) == form) revert(player);
+                else transform(player, form);
             }
             case AngelAction.ATTACK -> attack(player, now);
             case AngelAction.DASH -> startDash(player, now);
@@ -321,11 +333,13 @@ public final class Angels {
             && level.isDay() && !level.isRaining() && level.canSeeSky(BlockPos.containing(player.getEyePosition()));
     }
 
-    private static void transform(ServerPlayer player, boolean fire) {
+    private static void transform(ServerPlayer player, int form) {
+        boolean fire = form == AngelForms.INFERNO;
+        boolean mundane = form == AngelForms.RETRIBUTION;
         boolean sunlight = sun(player);
         boolean paid = pay(player, fire ? PyraCombat.TRANSFORM_COST : 5);
         if (!paid && !sunlight) {
-            burst(player, fire ? AngelBurst.DIM | AngelBurst.FIRE : AngelBurst.DIM,
+            if (!mundane) burst(player, fire ? AngelBurst.DIM | AngelBurst.FIRE : AngelBurst.DIM,
                 player.position(), player.position());
             return;
         }
@@ -340,13 +354,14 @@ public final class Angels {
         s.meleeUsed = player.serverLevel().getGameTime();
         s.jumpedAt = -1;
         player.setData(INFERNO, fire);
+        player.setData(RETRIBUTION, mundane);
         float hoverSpeed = fire ? .05F : (float) SLOW_SPEED;
         player.setData(FORMATION, new Formation(player.serverLevel().getGameTime(), !sunlight));
         if (s.active) {
             player.getAbilities().setFlyingSpeed(hoverSpeed);
             player.onUpdateAbilities();
             // Changing aspect preserves flight grants, velocity and the current flight mode.
-            burst(player, sunlight ? AngelBurst.AWAKEN : AngelBurst.DIM, player.position(), player.position());
+            if (!mundane) burst(player, sunlight ? AngelBurst.AWAKEN : AngelBurst.DIM, player.position(), player.position());
             player.serverLevel().playSound(null, player, SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS,
                 sunlight ? .8F : .25F, fire ? .65F : 1.3F);
             return;
@@ -364,7 +379,7 @@ public final class Angels {
         flight.addTransientModifier(new AttributeModifier(FLIGHT_ATTRIBUTE, 1, AttributeModifier.Operation.ADD_VALUE));
         player.getAbilities().setFlyingSpeed(hoverSpeed);
         player.onUpdateAbilities();
-        burst(player, sunlight ? AngelBurst.AWAKEN : AngelBurst.DIM, player.position(), player.position());
+        if (!mundane) burst(player, sunlight ? AngelBurst.AWAKEN : AngelBurst.DIM, player.position(), player.position());
         player.serverLevel().playSound(null, player, SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS,
             sunlight ? .8F : .25F, fire ? .65F : sunlight ? 1.3F : .8F);
         sync(player);
@@ -372,8 +387,10 @@ public final class Angels {
 
     private static void revert(ServerPlayer player) {
         boolean fire = inferno(player);
+        boolean mundane = retribution(player);
         cancelPyra(player);
         player.setData(INFERNO, false);
+        player.setData(RETRIBUTION, false);
         player.setData(FORMATION, Formation.NONE);
         player.setData(DASH_STARTED, -1L);
         var s = player.getExistingData(SESSION).orElse(null);
@@ -404,7 +421,7 @@ public final class Angels {
             player.stopFallFlying();
             player.onUpdateAbilities();
         }
-        if (wasActive && player.isAlive()) {
+        if (wasActive && player.isAlive() && !mundane) {
             burst(player, fire ? AngelBurst.DIM | AngelBurst.FIRE : AngelBurst.DIM, player.position(), player.position());
         }
         sync(player);
@@ -601,7 +618,7 @@ public final class Angels {
             return;
         }
         if (!player.isAlive() || player.isSpectator() || player.isSleeping() || s.level != player.serverLevel()
-                || rank(player) < (inferno(player) ? 2 : 1)) {
+                || rank(player) < (retribution(player) ? 3 : inferno(player) ? 2 : 1)) {
             revert(player);
             return;
         }

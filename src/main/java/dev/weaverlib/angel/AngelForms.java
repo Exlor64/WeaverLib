@@ -4,12 +4,14 @@ package dev.weaverlib.angel;
 public final class AngelForms {
     public static final int DIVINITY = 0;
     public static final int INFERNO = 1;
+    public static final int RETRIBUTION = 2;
     private AngelForms() {}
 
     public static int invocation(int sequence, int rank) {
         if (rank < 1 || rank > 3 || sequence < 0 || sequence > 26) return -1;
         if (sequence == 0) return DIVINITY;
         if (sequence == 13 && rank >= 2) return INFERNO;
+        if (sequence == 26 && rank >= 3) return RETRIBUTION;
         return -1;
     }
 }

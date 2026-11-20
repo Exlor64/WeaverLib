@@ -20,7 +20,7 @@ public final class AngelSpellRulesTest {
                 if(sequence>=0 && sequence<27 &&
                         (AngelSpellRules.spell(sequence,rank)>=0 || AngelForms.invocation(sequence,rank)>=0)) known++;
             }
-            check(known==(rank==1?1:rank==2||rank==3?8:0));
+            check(known==(rank==1?1:rank==2?8:rank==3?9:0));
         }
         for(int i=0;i<costs.length;i++) check(AngelSpellRules.cost(i)==costs[i]);
         check(AngelSpellRules.smiteDamage(1)==10);
